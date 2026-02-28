@@ -1,23 +1,4 @@
-import type { UserProfile, SkillGapMap, SkillAssessment, CareerRoadmap } from './types';
-
-export const MOCK_PROFILE: UserProfile = {
-  name: 'Sarah Chan',
-  currentRole: 'Senior Accountant',
-  industry: 'Finance',
-  subSector: 'Accounting & Audit',
-  seniorityLevel: 'senior',
-  yearsExperience: 7,
-  location: 'Hong Kong',
-  hardSkills: ['Financial Reporting', 'HKFRS', 'Tax Compliance', 'Audit', 'Budgeting', 'Cost Analysis'],
-  softSkills: ['Attention to Detail', 'Client Communication', 'Team Coordination'],
-  tools: ['Excel', 'SAP', 'QuickBooks', 'PowerPoint'],
-  certifications: ['HKICPA', 'CPA'],
-  languages: ['English (Fluent)', 'Cantonese (Native)', 'Mandarin (Conversational)'],
-  education: ['BBA Accounting, CUHK'],
-  primaryGoal: 'unsure',
-  weeklyHoursAvailable: 5,
-  preferredFormats: ['audio', 'video'],
-};
+import type { SkillGapMap, SkillAssessment, CareerRoadmap } from './types';
 
 const MOCK_SKILLS: SkillAssessment[] = [
   { skillName: 'Financial Reporting', category: 'technical', userLevel: 85, marketDemand: 90, demandTrend: 'stable', status: 'strong', priority: 'nice_to_have', reasoning: 'Core competency with strong market demand.' },

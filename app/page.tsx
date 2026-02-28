@@ -22,9 +22,7 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-16">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 1 }}
           className="text-center max-w-3xl"
         >
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-6">
@@ -33,12 +31,7 @@ export default function Home() {
           <p className="text-xl text-slate-600 mb-10">
             Discover your skill gaps, see what the market demands, and get three personalised career roadmaps — all in under 2 minutes.
           </p>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-          >
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/onboarding">
               <motion.span
                 whileHover={{ scale: 1.02 }}
@@ -48,13 +41,11 @@ export default function Home() {
                 Start Free Diagnosis →
               </motion.span>
             </Link>
-          </motion.div>
+          </div>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          initial={{ opacity: 1 }}
           className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl"
         >
           {[

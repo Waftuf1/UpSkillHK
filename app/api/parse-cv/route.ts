@@ -11,7 +11,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     return data.text || '';
   } catch (err) {
     console.error('PDF parse error:', err);
-    throw new Error('Failed to parse PDF. Try manual input or LinkedIn paste instead.');
+    throw new Error('Failed to parse PDF. Try manual input instead.');
   }
 }
 
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Only PDF and DOCX are supported' }, { status: 400 });
       }
     } else {
+<<<<<<< HEAD
       const body = await request.json();
       const text = body.text as string;
       const type = body.type as string;
@@ -71,6 +72,19 @@ export async function POST(request: NextRequest) {
 
     if (!rawText || rawText.length < 50) {
       return NextResponse.json({ success: false, error: 'Text too short to parse. Paste more of your profile or CV.' }, { status: 400 });
+=======
+      return NextResponse.json(
+        { success: false, error: 'Please upload a CV (PDF or DOCX) or use "Tell us manually".' },
+        { status: 400 }
+      );
+    }
+
+    if (!rawText || rawText.length < 50) {
+      return NextResponse.json(
+        { success: false, error: 'Text extracted from file is too short to parse. Try a different file or use "Tell us manually".' },
+        { status: 400 }
+      );
+>>>>>>> 08b4043e0957b1042804934ecbffa1f81c46bbe5
     }
 
     if (!isOpenAIAvailable() || !openai) {
@@ -115,7 +129,7 @@ export async function POST(request: NextRequest) {
       } else if (msg.includes('Unexpected token') || msg.includes('JSON')) {
         userMsg = 'The API returned an unexpected response. Check your API key and try again, or use "Tell us manually".';
       } else {
-        userMsg = `CV parsing failed: ${msg}. Try "Tell us manually" or paste LinkedIn instead.`;
+        userMsg = `CV parsing failed: ${msg}. Try "Tell us manually".`;
       }
       return NextResponse.json({ success: false, error: userMsg }, { status: 502 });
     }
