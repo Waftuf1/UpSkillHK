@@ -59,11 +59,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Missing text or type' }, { status: 400 });
       }
 
+      if (type === 'linkedin') {
+        return NextResponse.json(
+          { success: false, error: 'LinkedIn URL paste is no longer supported. Please use "Tell us manually" or upload your CV instead.' },
+          { status: 400 }
+        );
+      }
+
       rawText = text.replace(/\s+/g, ' ').trim();
     }
 
     if (!rawText || rawText.length < 50) {
-      return NextResponse.json({ success: false, error: 'Text too short to parse' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Text too short to parse. Paste more of your profile or CV.' }, { status: 400 });
     }
 
     if (!isOpenAIAvailable() || !openai) {

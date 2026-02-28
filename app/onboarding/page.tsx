@@ -8,7 +8,6 @@ import { useUser } from '@/context/UserContext';
 import { StepIndicator } from '@/components/onboarding/StepIndicator';
 import { RoleInput } from '@/components/onboarding/RoleInput';
 import { CVUpload } from '@/components/onboarding/CVUpload';
-import { LinkedInInput } from '@/components/onboarding/LinkedInInput';
 import { ProfileConfirm } from '@/components/onboarding/ProfileConfirm';
 import { MOCK_PROFILE } from '@/lib/mockData';
 import type { UserProfile } from '@/lib/types';
@@ -25,7 +24,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { setProfile, setDiagnosis } = useUser();
   const [step, setStep] = useState(1);
-  const [inputMethod, setInputMethod] = useState<'cv' | 'linkedin' | 'manual' | null>(null);
+  const [inputMethod, setInputMethod] = useState<'cv' | 'manual' | null>(null);
   const [profile, setProfileState] = useState<Partial<UserProfile> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -40,12 +39,6 @@ export default function OnboardingPage() {
   }, [isGenerating]);
 
   const handleCVSuccess = (p: UserProfile) => {
-    setProfileState(p);
-    setProfile(p);
-    setStep(3);
-  };
-
-  const handleLinkedInSuccess = (p: UserProfile) => {
     setProfileState(p);
     setProfile(p);
     setStep(3);
@@ -133,7 +126,7 @@ export default function OnboardingPage() {
               className="space-y-6"
             >
               <h1 className="text-2xl font-bold text-slate-900">How should we get to know you?</h1>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => setInputMethod('cv')}
@@ -142,15 +135,6 @@ export default function OnboardingPage() {
                   <div className="text-2xl mb-2">📤</div>
                   <h3 className="font-semibold">Upload CV</h3>
                   <p className="text-sm text-slate-600 mt-1">PDF or DOCX — we&apos;ll extract everything automatically</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInputMethod('linkedin')}
-                  className="p-6 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-all"
-                >
-                  <div className="text-2xl mb-2">💼</div>
-                  <h3 className="font-semibold">Paste LinkedIn</h3>
-                  <p className="text-sm text-slate-600 mt-1">Paste your LinkedIn profile text or URL</p>
                 </button>
                 <button
                   type="button"
@@ -166,11 +150,6 @@ export default function OnboardingPage() {
               {inputMethod === 'cv' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8">
                   <CVUpload onSuccess={handleCVSuccess} />
-                </motion.div>
-              )}
-              {inputMethod === 'linkedin' && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8">
-                  <LinkedInInput onSuccess={handleLinkedInSuccess} />
                 </motion.div>
               )}
             </motion.div>

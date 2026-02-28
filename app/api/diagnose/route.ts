@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const completion = await openai.chat.completions.create({
       model: AI_MODEL,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
+      temperature: 0,
       ...(IS_POE ? { extra_body: { web_search: true } } : { response_format: { type: 'json_object' } }),
     });
 
