@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai, isOpenAIAvailable, AI_MODEL, IS_POE } from '@/lib/openai';
 import { buildCVParsingPrompt } from '@/lib/prompts';
-import { MOCK_PROFILE } from '@/lib/mockData';
+import { extractJson } from '@/lib/parseJsonResponse';
 import type { UserProfile } from '@/lib/types';
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
@@ -67,10 +67,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isOpenAIAvailable() || !openai) {
-      return NextResponse.json({
-        success: true,
-        profile: { ...MOCK_PROFILE, ...parseBasicProfile(rawText) },
-      });
+      return NextResponse.json(
+        { success: false, error: 'No API key configured. Add POE_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY to .env.local and restart. Or use "Tell us manually" to skip CV upload.' },
+        { status: 503 }
+      );
     }
 
     try {
@@ -83,22 +83,34 @@ export async function POST(request: NextRequest) {
       });
 
       const content = completion.choices[0]?.message?.content;
-      if (!content) throw new Error('No response from AI');
+      if (!content || typeof content !== 'string') throw new Error('No response from AI');
 
-      const parsed = JSON.parse(content) as Record<string, unknown>;
+      const trimmed = content.trim();
+      if (trimmed.toLowerCase().includes('bad request') || trimmed.toLowerCase().startsWith('error')) {
+        throw new Error('API returned an error. Check your API key and try again.');
+      }
+
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = trimmed.startsWith('{') ? (JSON.parse(content) as Record<string, unknown>) : extractJson<Record<string, unknown>>(content);
+      } catch {
+        throw new Error('Could not read structured response from API. Try again or use "Tell us manually".');
+      }
       const profile = mapToUserProfile(parsed);
 
       return NextResponse.json({ success: true, profile });
     } catch (apiErr) {
-      // API failed (401, rate limit, etc.) — fall back to basic extraction so user can continue
-      console.warn('AI parse failed, using fallback:', apiErr);
-      const profile = { ...MOCK_PROFILE, ...parseBasicProfile(rawText) };
-      return NextResponse.json({
-        success: true,
-        profile,
-        fallback: true,
-        message: 'API key invalid or unavailable. We extracted basic info — you can edit it on the next step.',
-      });
+      console.warn('AI parse failed:', apiErr);
+      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+      let userMsg: string;
+      if (msg.includes('401') || msg.includes('User not found') || msg.includes('Invalid')) {
+        userMsg = 'Your API key is invalid or expired. Add a valid key to .env.local, or use "Tell us manually" to skip CV upload.';
+      } else if (msg.includes('Unexpected token') || msg.includes('JSON')) {
+        userMsg = 'The API returned an unexpected response. Check your API key and try again, or use "Tell us manually".';
+      } else {
+        userMsg = `CV parsing failed: ${msg}. Try "Tell us manually" or paste LinkedIn instead.`;
+      }
+      return NextResponse.json({ success: false, error: userMsg }, { status: 502 });
     }
   } catch (err) {
     console.error('parse-cv error:', err);
@@ -107,30 +119,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function parseBasicProfile(text: string): Partial<UserProfile> {
-  const t = text.toLowerCase();
-  const industries = ['finance', 'accounting', 'legal', 'technology', 'marketing', 'healthcare', 'education', 'government'];
-  const industry = industries.find((i) => t.includes(i)) || 'Other';
-  const roleMatch = text.match(/(?:title|position|role|job)[:\s]+([^\n,]+)/i) || text.match(/([A-Z][a-z]+ (?:Manager|Engineer|Analyst|Director|Accountant|Consultant))/);
-  const currentRole = roleMatch ? roleMatch[1].trim() : 'Professional';
-  return {
-    currentRole,
-    industry: industry.charAt(0).toUpperCase() + industry.slice(1),
-    seniorityLevel: 'mid',
-    yearsExperience: 3,
-    location: 'Hong Kong',
-    hardSkills: [],
-    softSkills: [],
-    tools: [],
-    certifications: [],
-    languages: ['English'],
-    education: [],
-    primaryGoal: 'unsure',
-    weeklyHoursAvailable: 5,
-    preferredFormats: ['video', 'audio'],
-  };
 }
 
 function mapToUserProfile(parsed: Record<string, unknown>): UserProfile {

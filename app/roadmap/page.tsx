@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useUser } from '@/context/UserContext';
 import { PathSelector } from '@/components/roadmap/PathSelector';
-import { MOCK_ROADMAPS } from '@/lib/mockData';
 
 export default function RoadmapPage() {
   const router = useRouter();
   const { diagnosis, profile, roadmaps, setRoadmaps } = useUser();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!diagnosis) {
@@ -20,7 +20,7 @@ export default function RoadmapPage() {
   }, [diagnosis, router]);
 
   useEffect(() => {
-    if (!diagnosis || roadmaps) {
+    if (!diagnosis || roadmaps || error) {
       setLoading(false);
       return;
     }
@@ -44,17 +44,17 @@ export default function RoadmapPage() {
         if (data.success && data.roadmaps?.length) {
           setRoadmaps(data.roadmaps);
         } else {
-          setRoadmaps(MOCK_ROADMAPS);
+          setError(data.error || 'Failed to generate roadmaps.');
         }
-      } catch {
-        setRoadmaps(MOCK_ROADMAPS);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Something went wrong.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchRoadmaps();
-  }, [diagnosis, profile, roadmaps, setRoadmaps]);
+  }, [diagnosis, profile, roadmaps, setRoadmaps, error]);
 
   if (!diagnosis) {
     return (
@@ -64,13 +64,43 @@ export default function RoadmapPage() {
     );
   }
 
-  if (!roadmaps || roadmaps.length === 0 || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <div className="animate-spin w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full" />
         <p className="text-slate-600">Generating your career roadmaps...</p>
       </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
+        <div className="max-w-lg w-full bg-white rounded-2xl border border-rose-200 shadow-lg p-8 text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Something went wrong</h1>
+          <p className="text-slate-600 mb-6">{error}</p>
+          <div className="space-y-3">
+            <Link
+              href={`/problem?message=${encodeURIComponent(error)}&from=roadmap`}
+              className="block w-full py-3 px-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+            >
+              See more & try again
+            </Link>
+            <Link
+              href="/diagnosis"
+              className="block w-full py-3 px-4 border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition-colors"
+            >
+              Back to Skill Map
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roadmaps || roadmaps.length === 0) {
+    return null;
   }
 
   return (

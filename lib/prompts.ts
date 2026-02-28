@@ -8,7 +8,7 @@ Given the following raw text extracted from a CV/resume, extract a structured pr
 - Regional regulatory knowledge (SFC, HKMA, HKICPA, etc.)
 - Seniority signals (years at firm, progression, title changes)
 
-Return a JSON object matching this exact structure:
+Return ONLY a valid JSON object with no other text before or after. Use this exact structure:
 {
   "name": "string or null",
   "currentRole": "most recent job title",

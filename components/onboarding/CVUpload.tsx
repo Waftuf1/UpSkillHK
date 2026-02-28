@@ -11,12 +11,10 @@ interface CVUploadProps {
 export function CVUpload({ onSuccess }: CVUploadProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
 
   const handleUpload = async (file: File) => {
     setIsLoading(true);
     setError(null);
-    setFallbackMessage(null);
 
     try {
       const formData = new FormData();
@@ -38,9 +36,6 @@ export function CVUpload({ onSuccess }: CVUploadProps) {
         throw new Error('Could not extract enough information from your CV');
       }
 
-      if (data.fallback) {
-        setFallbackMessage(data.message || 'Using basic extraction — please review and edit your profile.');
-      }
       onSuccess(profile);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -52,11 +47,6 @@ export function CVUpload({ onSuccess }: CVUploadProps) {
   return (
     <div className="space-y-4">
       <FileUpload onUpload={handleUpload} isLoading={isLoading} />
-      {fallbackMessage && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
-          {fallbackMessage}
-        </div>
-      )}
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-sm">
           {error}

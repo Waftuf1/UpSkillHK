@@ -10,7 +10,7 @@ import { RoleInput } from '@/components/onboarding/RoleInput';
 import { CVUpload } from '@/components/onboarding/CVUpload';
 import { LinkedInInput } from '@/components/onboarding/LinkedInInput';
 import { ProfileConfirm } from '@/components/onboarding/ProfileConfirm';
-import { MOCK_PROFILE, MOCK_SKILL_GAP_MAP } from '@/lib/mockData';
+import { MOCK_PROFILE } from '@/lib/mockData';
 import type { UserProfile } from '@/lib/types';
 
 const LOADING_MESSAGES = [
@@ -95,8 +95,8 @@ export default function OnboardingPage() {
       router.push('/diagnosis');
     } catch (err) {
       console.error(err);
-      setDiagnosis(MOCK_SKILL_GAP_MAP);
-      router.push('/diagnosis');
+      const message = err instanceof Error ? err.message : 'Skill map generation failed.';
+      router.push(`/problem?message=${encodeURIComponent(message)}&from=onboarding`);
     } finally {
       setIsGenerating(false);
     }

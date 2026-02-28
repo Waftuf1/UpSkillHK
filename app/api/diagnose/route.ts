@@ -1,8 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai, isOpenAIAvailable, AI_MODEL, IS_POE } from '@/lib/openai';
 import { buildSkillDiagnosisPrompt } from '@/lib/prompts';
-import { MOCK_SKILL_GAP_MAP } from '@/lib/mockData';
+import { extractJson } from '@/lib/parseJsonResponse';
 import type { UserProfile, SkillGapMap } from '@/lib/types';
+
+function getApiErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes('401') || msg.includes('User not found') || msg.includes('Invalid')) {
+    return 'Your API key is invalid or expired. Check POE_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY in .env.local and restart the server.';
+  }
+  if (msg.includes('402') || msg.includes('credits')) {
+    return 'Insufficient API credits. Add credits or use a different key.';
+  }
+  if (msg.includes('429')) {
+    return 'Too many requests. Please try again in a few minutes.';
+  }
+  if (msg.includes('Unexpected token') || msg.includes('JSON')) {
+    return 'The API returned an unexpected response. Check your API key and try again.';
+  }
+  return msg || 'Skill gap analysis failed. Please try again.';
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,42 +30,39 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isOpenAIAvailable() || !openai) {
-      const mock = { ...MOCK_SKILL_GAP_MAP };
-      mock.role = profile.currentRole;
-      mock.industry = profile.industry;
-      return NextResponse.json({ success: true, diagnosis: mock });
+      return NextResponse.json(
+        { success: false, error: 'No API key configured. Add POE_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY to .env.local and restart the server.' },
+        { status: 503 }
+      );
     }
 
+    const prompt = buildSkillDiagnosisPrompt(profile);
+    const completion = await openai.chat.completions.create({
+      model: AI_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      ...(IS_POE ? { extra_body: { web_search: true } } : { response_format: { type: 'json_object' } }),
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content || typeof content !== 'string') throw new Error('No response from AI');
+    const trimmed = content.trim();
+    if (trimmed.toLowerCase().includes('bad request') || (trimmed.length < 100 && trimmed.toLowerCase().includes('error'))) {
+      throw new Error('API returned an error. Check your API key.');
+    }
+    let parsed: Record<string, unknown>;
     try {
-      const prompt = buildSkillDiagnosisPrompt(profile);
-      const completion = await openai.chat.completions.create({
-        model: AI_MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        ...(IS_POE ? { extra_body: { web_search: true } } : { response_format: { type: 'json_object' } }),
-      });
-
-      const content = completion.choices[0]?.message?.content;
-      if (!content) throw new Error('No response from AI');
-
-      const parsed = JSON.parse(content) as Record<string, unknown>;
-      const diagnosis = mapToSkillGapMap(parsed, profile);
-
-      return NextResponse.json({ success: true, diagnosis });
-    } catch (apiErr) {
-      // API failed (401, etc.) — use mock so user can continue
-      console.warn('Diagnose API failed, using mock:', apiErr);
-      const mock = { ...MOCK_SKILL_GAP_MAP };
-      mock.role = profile.currentRole;
-      mock.industry = profile.industry;
-      return NextResponse.json({ success: true, diagnosis: mock });
+      parsed = trimmed.startsWith('{') ? (JSON.parse(content) as Record<string, unknown>) : extractJson<Record<string, unknown>>(content);
+    } catch {
+      throw new Error('Invalid API response. Please try again.');
     }
+    const diagnosis = mapToSkillGapMap(parsed, profile);
+
+    return NextResponse.json({ success: true, diagnosis });
   } catch (err) {
     console.error('diagnose error:', err);
-    return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : 'Diagnosis failed' },
-      { status: 500 }
-    );
+    const message = getApiErrorMessage(err);
+    return NextResponse.json({ success: false, error: message }, { status: 502 });
   }
 }
 
