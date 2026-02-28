@@ -4,7 +4,7 @@ An AI-powered career skill diagnosis tool for Hong Kong professionals. Get your 
 
 ## Features
 
-- **3 input methods**: Upload CV (PDF/DOCX), paste LinkedIn, or answer quick questions
+- **2 input methods**: Upload CV (PDF/DOCX) or answer quick questions
 - **Skill Gap Map**: See which skills are 🟢 STRONG, 🟡 FADING, or 🔴 MISSING
 - **3 career paths**: Stay & Dominate, Level Up, or Pivot
 - **Week-by-week plans**: Detailed learning milestones with HK-specific content
@@ -49,7 +49,7 @@ app/
   diagnosis/        # Skill Gap Map results
   roadmap/          # 3 career paths
   api/
-    parse-cv/       # CV/LinkedIn parsing
+    parse-cv/       # CV parsing
     diagnose/       # Skill gap analysis
     roadmap/        # Career roadmap generation
 components/

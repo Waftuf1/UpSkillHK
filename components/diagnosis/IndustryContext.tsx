@@ -18,8 +18,11 @@ export function IndustryContext({ insights, industry }: IndustryContextProps) {
       className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"
     >
       <h3 className="text-lg font-semibold text-slate-900 mb-4">
-        What&apos;s Changing in {industry} in Hong Kong
+        Overview: What&apos;s changing in Hong Kong
       </h3>
+      <p className="text-sm text-slate-500 mb-3">
+        Trends and shifts in {industry} relevant to your role.
+      </p>
       <ul className="space-y-3">
         {insights.map((insight, i) => (
           <li key={i} className="flex gap-3">

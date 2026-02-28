@@ -35,12 +35,28 @@ export interface SkillAssessment {
   timeToAcquire?: string;   // e.g. "2-3 weeks", "2 months"
 }
 
+export interface FutureForecastItem {
+  title: string;
+  explanation?: string;   // why this skill is increasing in importance
+  dataUsed?: string;      // description of data used to form the forecast
+  links?: string[];       // URLs to sources (job boards, reports, regulatory pages)
+}
+
+export interface ReadinessRubric {
+  skillCoverage: number;     // 0-30: % of skills that are strong
+  criticalGaps: number;      // 0-25: penalty for missing critical skills
+  proficiencyDepth: number;  // 0-20: how deep your strong skills are vs demand
+  trendAlignment: number;    // 0-15: are your strong skills rising in demand
+  fadingRisk: number;        // 0-10: penalty for fading/obsolete skills
+}
+
 export interface SkillGapMap {
   userId: string;
   generatedAt: string;
   industry: string;
   role: string;
   overallReadiness: number;  // 0-100 score
+  rubric: ReadinessRubric;   // transparent breakdown of how score was computed
   skills: SkillAssessment[];
   strongCount: number;
   fadingCount: number;
@@ -48,6 +64,8 @@ export interface SkillGapMap {
   topPriorities: string[];   // top 3 skills to learn NOW
   industryInsights: string[]; // 3-5 bullet points about industry trends
   peerComparison: string;    // "You're ahead of ~65% of HK accountants"
+  futureForecast?: string[]; // short list for display
+  futureForecastDetail?: FutureForecastItem[]; // in-depth: explanation, data used, links
 }
 
 export interface CareerRoadmap {

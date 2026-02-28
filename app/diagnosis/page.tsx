@@ -6,22 +6,36 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useUser } from '@/context/UserContext';
 import { SkillGapMap } from '@/components/diagnosis/SkillGapMap';
+import { StepIndicator } from '@/components/onboarding/StepIndicator';
+import { WaffleSpinner } from '@/components/ui/WaffleSpinner';
 import { Button } from '@/components/ui/Button';
+import type { SkillGapMap as SkillGapMapType } from '@/lib/types';
+
+const STORAGE_KEY = 'upskillhk-diagnosis';
 
 export default function DiagnosisPage() {
   const router = useRouter();
-  const { diagnosis } = useUser();
+  const { diagnosis, setDiagnosis } = useUser();
 
   useEffect(() => {
-    if (!diagnosis) {
-      router.replace('/onboarding');
-    }
-  }, [diagnosis, router]);
+    if (diagnosis) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SkillGapMapType;
+        setDiagnosis(parsed);
+        sessionStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+    } catch {}
+    router.replace('/onboarding');
+  }, [diagnosis, setDiagnosis, router]);
 
   if (!diagnosis) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full" />
+        <WaffleSpinner size={64} />
       </div>
     );
   }
@@ -29,15 +43,23 @@ export default function DiagnosisPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        <Link href="/" className="text-blue-600 hover:underline text-sm mb-6 inline-block">
-          ← Back to home
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link href="/" className="text-blue-600 hover:underline text-sm">
+            ← Home
+          </Link>
+          <Link href="/onboarding?step=2" className="text-blue-600 hover:underline text-sm">
+            ← Back to Step 2
+          </Link>
+        </div>
+
+        <StepIndicator currentStep={3} totalSteps={3} />
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
+          <p className="text-sm font-medium text-slate-500 mb-1">Step 3 of 3</p>
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Your Skill Gap Map</h1>
           <p className="text-slate-600 mt-2">
             Based on your profile as a {diagnosis.role} in {diagnosis.industry}, Hong Kong

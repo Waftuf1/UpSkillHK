@@ -7,6 +7,7 @@ import { DataSourcesChart } from './DataSourcesChart';
 import { SkillRadarChart } from './SkillRadarChart';
 import { SkillCard } from './SkillCard';
 import { IndustryContext } from './IndustryContext';
+import { FutureForecastSection } from './FutureForecastSection';
 
 interface SkillGapMapProps {
   data: SkillGapMapType;
@@ -87,6 +88,8 @@ export function SkillGapMap({ data }: SkillGapMapProps) {
       </div>
 
       <IndustryContext insights={data.industryInsights} industry={data.industry} />
+
+      <FutureForecastSection data={data} />
     </motion.div>
   );
 }
