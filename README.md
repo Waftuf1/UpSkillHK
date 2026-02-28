@@ -64,6 +64,27 @@ lib/
   mockData.ts       # Demo data
 ```
 
+## Pushing to GitHub (for collaborators)
+
+1. Create a new repo on GitHub (e.g. `UpSkillHK`).
+2. Add the remote and push:
+   ```bash
+   git remote add origin https://github.com/YOUR_USERNAME/UpSkillHK.git
+   git branch -M main
+   git push -u origin main
+   ```
+3. Friends can clone and contribute:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/UpSkillHK.git
+   cd UpSkillHK
+   npm install
+   cp .env.local.example .env.local
+   # Add their own API key to .env.local
+   npm run dev
+   ```
+
+**Note:** `.env.local` is gitignored — each developer adds their own API key locally. Never commit real API keys.
+
 ## Deployment
 
 Deploy to Vercel:
