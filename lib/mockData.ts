@@ -21,6 +21,7 @@ export const MOCK_SKILL_GAP_MAP: SkillGapMap = {
   industry: 'Finance',
   role: 'Senior Accountant',
   overallReadiness: 58,
+  rubric: { skillCoverage: 20, criticalGaps: 15, proficiencyDepth: 12, trendAlignment: 8, fadingRisk: 3 },
   skills: MOCK_SKILLS,
   strongCount: 4,
   fadingCount: 2,

@@ -101,14 +101,16 @@ export function ProfileConfirm({ profile, onGenerate }: ProfileConfirmProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Years of experience</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Years of experience: {yearsExperience}
+          </label>
           <input
-            type="number"
+            type="range"
             min={0}
             max={50}
             value={yearsExperience}
             onChange={(e) => setYearsExperience(parseInt(e.target.value, 10) || 0)}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full accent-blue-600"
           />
         </div>
 

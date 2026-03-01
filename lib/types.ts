@@ -95,6 +95,13 @@ export interface WeekPlan {
   assessmentIncluded: boolean;
 }
 
+export interface LearningResource {
+  type: 'video' | 'article' | 'course' | 'tool';
+  title: string;
+  description?: string;
+  url?: string;
+}
+
 export interface LearningTask {
   title: string;
   format: 'video' | 'audio' | 'reading' | 'interactive' | 'practice' | 'quiz' | 'reflection';
@@ -102,4 +109,6 @@ export interface LearningTask {
   description: string;
   skillTargeted: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
+  learningGuide?: string;
+  resources?: LearningResource[];
 }

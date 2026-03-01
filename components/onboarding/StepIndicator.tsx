@@ -9,7 +9,7 @@ interface StepIndicatorProps {
 
 export function StepIndicator({ currentStep, totalSteps = 3 }: StepIndicatorProps) {
   return (
-    <div className="flex items-center justify-center gap-2 mb-8">
+    <div className="flex flex-nowrap items-center justify-center gap-2 mb-8">
       {Array.from({ length: totalSteps }).map((_, i) => (
         <div key={i} className="flex items-center">
           <motion.div

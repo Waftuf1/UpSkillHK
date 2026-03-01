@@ -6,20 +6,6 @@ import { motion } from 'framer-motion';
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
-            UpSkill HK
-          </span>
-          <Link
-            href="/onboarding"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            Get Started
-          </Link>
-        </div>
-      </header>
-
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-16">
         <motion.div
           initial={{ opacity: 1 }}

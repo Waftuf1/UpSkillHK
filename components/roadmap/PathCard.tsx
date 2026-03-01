@@ -16,7 +16,7 @@ const PATH_CONFIG = {
 };
 
 export function PathCard({ roadmap, isSelected, onClick }: PathCardProps) {
-  const config = PATH_CONFIG[roadmap.pathType];
+  const config = PATH_CONFIG[roadmap.pathType] ?? PATH_CONFIG.stay_dominate;
   const colorClasses = {
     blue: 'border-blue-500 bg-blue-50',
     purple: 'border-violet-500 bg-violet-50',
@@ -38,11 +38,16 @@ export function PathCard({ roadmap, isSelected, onClick }: PathCardProps) {
         <span className="px-2 py-1 bg-white/80 rounded text-sm font-medium">{roadmap.timeline}</span>
         <span className="px-2 py-1 bg-white/80 rounded text-sm">{roadmap.weeklyCommitment}</span>
       </div>
-      {roadmap.milestones.length > 0 && (
-        <div className="mt-4 text-sm text-slate-500">
-          Key skills: {roadmap.milestones.slice(0, 2).flatMap((m) => m.skillsTargeted).slice(0, 4).join(', ')}
-        </div>
-      )}
+      {(() => {
+        const fromMilestones = roadmap.milestones?.slice(0, 2).flatMap((m) => m.skillsTargeted ?? []).slice(0, 4).filter(Boolean) ?? [];
+        const fromTasks = roadmap.weeklyPlan?.slice(0, 2).flatMap((w) => w.tasks?.map((t) => t.skillTargeted).filter(Boolean) ?? []) ?? [];
+        const skills = fromMilestones.length > 0 ? fromMilestones : Array.from(new Set(fromTasks)).slice(0, 4);
+        return skills.length > 0 ? (
+          <div className="mt-4 text-sm text-slate-500">
+            Key skills: {skills.join(', ')}
+          </div>
+        ) : null;
+      })()}
     </motion.div>
   );
 }

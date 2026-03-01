@@ -1,13 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai, isOpenAIAvailable, AI_MODEL, IS_POE } from '@/lib/openai';
+import { openai, isOpenAIAvailable, AI_MODEL } from '@/lib/openai';
 import { buildSkillDiagnosisPrompt } from '@/lib/prompts';
-import { extractJson } from '@/lib/parseJsonResponse';
-import type { UserProfile, SkillGapMap } from '@/lib/types';
+import { parseJsonRobust } from '@/lib/parseJsonResponse';
+import type { UserProfile, SkillGapMap, SkillAssessment } from '@/lib/types';
+
+/** Build a fallback diagnosis when AI response cannot be parsed. */
+function buildFallbackDiagnosis(profile: UserProfile): SkillGapMap {
+  const skills: SkillAssessment[] = [];
+  const fromProfile = [
+    ...(profile.hardSkills || []),
+    ...(profile.softSkills || []),
+    ...(profile.tools || []),
+    ...(profile.certifications || []),
+  ].filter(Boolean).slice(0, 8);
+  for (const s of fromProfile) {
+    skills.push({
+      skillName: s,
+      category: 'technical',
+      userLevel: 60,
+      marketDemand: 65,
+      demandTrend: 'stable',
+      status: 'strong',
+      priority: 'nice_to_have',
+      reasoning: 'From your profile.',
+    });
+  }
+  const commonGaps = ['Data Analytics', 'Excel', 'Communication', 'Project Management'].filter(
+    (g) => !fromProfile.some((f) => f.toLowerCase().includes(g.toLowerCase()))
+  );
+  for (const g of commonGaps.slice(0, 5)) {
+    skills.push({
+      skillName: g,
+      category: 'technical',
+      userLevel: 30,
+      marketDemand: 70,
+      demandTrend: 'rising',
+      status: 'missing',
+      priority: 'important',
+      reasoning: 'Common HK market requirement.',
+      timeToAcquire: '2-3 months',
+    });
+  }
+  const strongCount = skills.filter((s) => s.status === 'strong').length;
+  const missingCount = skills.filter((s) => s.status === 'missing').length;
+  const fadingCount = skills.filter((s) => s.status === 'fading').length;
+  const total = skills.length || 1;
+  return {
+    userId: 'gen-' + Date.now(),
+    generatedAt: new Date().toISOString(),
+    industry: profile.industry || 'Other',
+    role: profile.currentRole || 'Professional',
+    overallReadiness: Math.min(100, Math.round((strongCount / total) * 100)),
+    rubric: {
+      skillCoverage: Math.round((strongCount / total) * 30),
+      criticalGaps: Math.max(0, 25 - Math.round((missingCount / total) * 50)),
+      proficiencyDepth: 15,
+      trendAlignment: 10,
+      fadingRisk: 5,
+    },
+    skills,
+    strongCount,
+    fadingCount,
+    missingCount,
+    topPriorities: commonGaps.slice(0, 3),
+    industryInsights: ['Complete a full analysis to get personalised insights.'],
+    peerComparison: 'Based on your profile.',
+    futureForecast: [`Senior ${profile.currentRole || 'Professional'}`, `${profile.industry || 'Industry'} Specialist`],
+  };
+}
 
 function getApiErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (msg.includes('401') || msg.includes('User not found') || msg.includes('Invalid key') || msg.includes('invalid_api_key')) {
-    return 'Your API key is invalid or expired. Check POE_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY in .env.local and restart the server.';
+    return 'Your API key is invalid or expired. Check GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, MINIMAX_API_KEY, AWS_BEDROCK_API_KEY, or OPENAI_API_KEY in .env.local and restart the server.';
   }
   if (msg.includes('402') || msg.includes('credits')) {
     return 'Insufficient API credits. Add credits or use a different key.';
@@ -20,7 +85,13 @@ function getApiErrorMessage(err: unknown): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { profile } = (await request.json()) as { profile: UserProfile };
+    let body: { profile?: UserProfile };
+    try {
+      body = (await request.json()) as { profile: UserProfile };
+    } catch {
+      return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+    }
+    const { profile } = body;
 
     if (!profile || !profile.currentRole || !profile.industry) {
       return NextResponse.json({ success: false, error: 'Invalid profile' }, { status: 400 });
@@ -28,41 +99,33 @@ export async function POST(request: NextRequest) {
 
     if (!isOpenAIAvailable() || !openai) {
       return NextResponse.json(
-        { success: false, error: 'No API key configured. Add POE_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY to .env.local and restart the server.' },
+        { success: false, error: 'No API key configured. Add GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, MINIMAX_API_KEY, AWS_BEDROCK_API_KEY, or OPENAI_API_KEY to .env.local and restart the server.' },
         { status: 503 }
       );
     }
 
-    const prompt = buildSkillDiagnosisPrompt(profile);
-    // With Poe: web_search lets the model use real HK job/regulatory data for marketDemand and trends
+    const prompt = buildSkillDiagnosisPrompt(profile as UserProfile);
     const completion = await openai.chat.completions.create({
       model: AI_MODEL,
       messages: [{ role: 'user', content: prompt }],
-<<<<<<< HEAD
       temperature: 0,
-=======
-      temperature: 0.1,
->>>>>>> 08b4043e0957b1042804934ecbffa1f81c46bbe5
-      ...(IS_POE ? { extra_body: { web_search: true } } : { response_format: { type: 'json_object' } }),
+      response_format: { type: 'json_object' },
     });
 
     const content = completion.choices[0]?.message?.content;
     if (!content || typeof content !== 'string') throw new Error('No response from AI');
-    // Strip markdown code fences (```json ... ```) that Poe often wraps around JSON
     const stripped = content.trim().replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
     if (stripped.toLowerCase().includes('bad request') || (stripped.length < 100 && stripped.toLowerCase().includes('error'))) {
       throw new Error('API returned an error. Check your API key.');
     }
+
     let parsed: Record<string, unknown>;
     try {
-      parsed = JSON.parse(stripped) as Record<string, unknown>;
-    } catch {
-      try {
-        parsed = extractJson<Record<string, unknown>>(stripped);
-      } catch {
-        console.error('Failed to parse AI response:', stripped.slice(0, 500));
-        throw new Error('Could not parse the AI response as JSON. Please try again.');
-      }
+      parsed = parseJsonRobust<Record<string, unknown>>(content);
+    } catch (parseErr) {
+      console.warn('AI JSON parse failed, using fallback diagnosis:', parseErr);
+      const diagnosis = buildFallbackDiagnosis(profile as UserProfile);
+      return NextResponse.json({ success: true, diagnosis });
     }
     const diagnosis = mapToSkillGapMap(parsed, profile);
 
@@ -83,6 +146,8 @@ function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile)
           ['rising', 'stable', 'declining'].includes(String(s.demandTrend))
             ? (s.demandTrend as 'rising' | 'stable' | 'declining')
             : 'stable';
+
+        const skillName = String(s.skillName || s.name || s.skill || 'Unknown Skill');
 
         // Enforce status from the data:
         // missing = not on CV (low userLevel) but market wants it
@@ -107,7 +172,7 @@ function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile)
         else priority = 'nice_to_have';
 
         return {
-          skillName: String(s.skillName || s.name || s.skill || 'Unknown Skill'),
+          skillName: skillName,
           category: ['technical', 'soft', 'tool', 'certification', 'domain'].includes(String(s.category))
             ? (s.category as SkillGapMap['skills'][0]['category'])
             : 'technical',
@@ -126,38 +191,43 @@ function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile)
   const strongSkills = skills.filter((s) => s.status === 'strong');
   const fadingSkills = skills.filter((s) => s.status === 'fading');
   const missingSkills = skills.filter((s) => s.status === 'missing');
+  const criticalMissingSkills = missingSkills.filter((s) => s.priority === 'critical');
   const strongCount = strongSkills.length;
   const fadingCount = fadingSkills.length;
   const missingCount = missingSkills.length;
-  const criticalMissing = missingSkills.filter((s) => s.priority === 'critical').length;
+  const criticalMissing = criticalMissingSkills.length;
 
-  // --- Structured rubric (100 points total) ---
-  // 1. Skill Coverage (30pts): what % of assessed skills are strong
-  const skillCoverage = Math.round((strongCount / total) * 30);
+  // --- Rubric: compare to peers in field over 5yr. Gaps hurt; few strong can't rescue many missing ---
 
-  // 2. Critical Gaps (25pts): start at 25, lose points for each critical missing skill
-  const criticalGaps = Math.round(Math.max(0, 25 - (criticalMissing / total) * 50));
+  // 1. Skill Coverage (30pts): % of assessed skills you have strong (vs peers who typically have most)
+  //    Count-based: 3/15 strong = 20% = 6pts. No inflation from having "high-demand" strong.
+  const skillCoverage = Math.round(30 * (strongCount / total));
 
-  // 3. Proficiency Depth (20pts): for strong skills, how close is userLevel to marketDemand
-  const proficiencyDepth = strongCount > 0
-    ? Math.round(
-        (strongSkills.reduce((sum, s) => sum + Math.min(1, s.userLevel / Math.max(1, s.marketDemand)), 0) / strongCount) * 20
-      )
+  // 2. Critical Gaps (25pts): heavy penalty — missing what peers have hurts a lot
+  //    ~6pts per critical missing, ~2pts per other missing. 4 critical + 5 other = 24+10 = 34 → 0
+  const criticalGapPenalty = criticalMissing * 6 + (missingCount - criticalMissing) * 2;
+  const criticalGaps = Math.round(Math.max(0, 25 - criticalGapPenalty));
+
+  // 3. Proficiency Depth (20pts): scaled by coverage — can't get 20 if you have few strong
+  //    avg proficiency ratio × (strongCount/total) so many gaps cap your depth score
+  const avgProficiency = strongCount > 0
+    ? strongSkills.reduce((sum, s) => sum + Math.min(1, s.userLevel / Math.max(1, s.marketDemand)), 0) / strongCount
     : 0;
+  const proficiencyDepth = Math.round(20 * avgProficiency * (strongCount / total));
 
-  // 4. Trend Alignment (15pts): % of strong skills that have rising demand
+  // 4. Trend Alignment (15pts): of your strong skills, how many are rising? Scaled by coverage.
   const risingStrong = strongSkills.filter((s) => s.demandTrend === 'rising').length;
   const trendAlignment = strongCount > 0
-    ? Math.round((risingStrong / strongCount) * 15)
+    ? Math.round(15 * (risingStrong / strongCount) * (strongCount / total))
     : 0;
 
-  // 5. Fading Risk (10pts): start at 10, lose points for fading skills
-  const fadingRisk = Math.round(Math.max(0, 10 - (fadingCount / total) * 20));
+  // 5. Fading Risk (10pts): penalty for skills on CV that peers are moving away from
+  const fadingPenalty = total > 0 ? (fadingCount / total) * 12 : 0; // up to 12pts lost
+  const fadingRisk = Math.round(Math.max(0, 10 - fadingPenalty));
 
   const rubric = { skillCoverage, criticalGaps, proficiencyDepth, trendAlignment, fadingRisk };
-  const overallReadiness = Math.min(100, Math.max(0,
-    skillCoverage + criticalGaps + proficiencyDepth + trendAlignment + fadingRisk
-  ));
+  const rawSum = skillCoverage + criticalGaps + proficiencyDepth + trendAlignment + fadingRisk;
+  const overallReadiness = Math.min(100, Math.max(0, Math.round(rawSum)));
 
   return {
     userId: typeof parsed.userId === 'string' ? parsed.userId : 'gen-' + Date.now(),

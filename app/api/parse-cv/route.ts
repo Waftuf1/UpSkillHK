@@ -1,18 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai, isOpenAIAvailable, AI_MODEL, IS_POE } from '@/lib/openai';
-import { buildCVParsingPrompt } from '@/lib/prompts';
-import { extractJson } from '@/lib/parseJsonResponse';
+import { openai, isOpenAIAvailable, AI_MODEL } from '@/lib/openai';
+import { buildCVParsingPrompt, CV_PARSING_FROM_PDF_PROMPT } from '@/lib/prompts';
+import { parseJsonRobust } from '@/lib/parseJsonResponse';
 import type { UserProfile } from '@/lib/types';
+
+const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GOOGLE_GEMINI_MODEL || 'gemini-2.0-flash';
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const pdfParse = (await import('pdf-parse')).default as (buf: Buffer) => Promise<{ text: string }>;
-    const data = await pdfParse(buffer);
-    return data.text || '';
+    const { extractText, getDocumentProxy } = await import('unpdf');
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { text } = await extractText(pdf, { mergePages: true });
+    return text?.trim() || '';
   } catch (err) {
-    console.error('PDF parse error:', err);
-    throw new Error('Failed to parse PDF. Try manual input instead.');
+    try {
+      const pdfParse = (await import('pdf-parse')).default as (buf: Buffer) => Promise<{ text: string }>;
+      const data = await pdfParse(buffer);
+      return data.text || '';
+    } catch (fallbackErr) {
+      console.error('PDF parse error:', err, fallbackErr);
+      throw new Error('This PDF could not be read (e.g. scanned/image-based). Try a text-based PDF or use "Tell us manually".');
+    }
   }
+}
+
+/** Use Gemini's native API to read PDF directly (including scanned/image-based). */
+async function parsePDFWithGemini(buffer: Buffer): Promise<Record<string, unknown>> {
+  if (!GEMINI_API_KEY) throw new Error('Gemini API key required for PDF vision extraction');
+
+  const base64 = buffer.toString('base64');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: CV_PARSING_FROM_PDF_PROMPT }, { inlineData: { mimeType: 'application/pdf', data: base64 } }] }],
+      generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API error ${res.status}: ${err.slice(0, 200)}`);
+  }
+
+  const data = (await res.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text || typeof text !== 'string') throw new Error('No response from Gemini');
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = parseJsonRobust<Record<string, unknown>>(text);
+  } catch {
+    throw new Error('Could not parse Gemini response as JSON');
+  }
+  return parsed;
 }
 
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
@@ -44,35 +90,34 @@ export async function POST(request: NextRequest) {
       const ext = file.name.split('.').pop()?.toLowerCase();
 
       if (ext === 'pdf') {
-        rawText = await extractTextFromPDF(buffer);
+        try {
+          rawText = await extractTextFromPDF(buffer);
+        } catch (pdfErr) {
+          // Fallback: use Gemini vision to read PDF directly (handles scanned/image-based PDFs)
+          if (GEMINI_API_KEY) {
+            try {
+              const parsed = await parsePDFWithGemini(buffer);
+              if (parsed.isValidCV === false) {
+                const reason = typeof parsed.rejectionReason === 'string' ? parsed.rejectionReason : null;
+                return NextResponse.json({
+                  success: false,
+                  error: reason || 'This doesn\'t appear to be a CV. Please upload a resume or CV that contains your work experience, skills, and education.',
+                }, { status: 400 });
+              }
+              const profile = mapToUserProfile(parsed);
+              return NextResponse.json({ success: true, profile });
+            } catch (geminiErr) {
+              console.warn('Gemini PDF fallback failed:', geminiErr);
+            }
+          }
+          throw pdfErr;
+        }
       } else if (ext === 'docx') {
         rawText = await extractTextFromDOCX(buffer);
       } else {
         return NextResponse.json({ success: false, error: 'Only PDF and DOCX are supported' }, { status: 400 });
       }
     } else {
-<<<<<<< HEAD
-      const body = await request.json();
-      const text = body.text as string;
-      const type = body.type as string;
-
-      if (!text || !type) {
-        return NextResponse.json({ success: false, error: 'Missing text or type' }, { status: 400 });
-      }
-
-      if (type === 'linkedin') {
-        return NextResponse.json(
-          { success: false, error: 'LinkedIn URL paste is no longer supported. Please use "Tell us manually" or upload your CV instead.' },
-          { status: 400 }
-        );
-      }
-
-      rawText = text.replace(/\s+/g, ' ').trim();
-    }
-
-    if (!rawText || rawText.length < 50) {
-      return NextResponse.json({ success: false, error: 'Text too short to parse. Paste more of your profile or CV.' }, { status: 400 });
-=======
       return NextResponse.json(
         { success: false, error: 'Please upload a CV (PDF or DOCX) or use "Tell us manually".' },
         { status: 400 }
@@ -84,12 +129,11 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Text extracted from file is too short to parse. Try a different file or use "Tell us manually".' },
         { status: 400 }
       );
->>>>>>> 08b4043e0957b1042804934ecbffa1f81c46bbe5
     }
 
     if (!isOpenAIAvailable() || !openai) {
       return NextResponse.json(
-        { success: false, error: 'No API key configured. Add POE_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY to .env.local and restart. Or use "Tell us manually" to skip CV upload.' },
+        { success: false, error: 'No API key configured. Add GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY, MINIMAX_API_KEY, or AWS_BEDROCK_API_KEY to .env.local and restart. Or use "Tell us manually" to skip CV upload.' },
         { status: 503 }
       );
     }
@@ -99,8 +143,8 @@ export async function POST(request: NextRequest) {
       const completion = await openai.chat.completions.create({
         model: AI_MODEL,
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.2,
-        ...(IS_POE ? {} : { response_format: { type: 'json_object' } }),
+        temperature: 0,
+        response_format: { type: 'json_object' },
       });
 
       const content = completion.choices[0]?.message?.content;
@@ -113,10 +157,19 @@ export async function POST(request: NextRequest) {
 
       let parsed: Record<string, unknown>;
       try {
-        parsed = trimmed.startsWith('{') ? (JSON.parse(content) as Record<string, unknown>) : extractJson<Record<string, unknown>>(content);
+        parsed = parseJsonRobust<Record<string, unknown>>(content);
       } catch {
         throw new Error('Could not read structured response from API. Try again or use "Tell us manually".');
       }
+
+      if (parsed.isValidCV === false) {
+        const reason = typeof parsed.rejectionReason === 'string' ? parsed.rejectionReason : null;
+        return NextResponse.json({
+          success: false,
+          error: reason || 'This doesn\'t appear to be a CV. Please upload a resume or CV that contains your work experience, skills, and education.',
+        }, { status: 400 });
+      }
+
       const profile = mapToUserProfile(parsed);
 
       return NextResponse.json({ success: true, profile });

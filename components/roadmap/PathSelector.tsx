@@ -8,20 +8,25 @@ import type { CareerRoadmap } from '@/lib/types';
 
 interface PathSelectorProps {
   roadmaps: CareerRoadmap[];
+  onPathChange?: (pathType: string | null) => void;
 }
 
-export function PathSelector({ roadmaps }: PathSelectorProps) {
+export function PathSelector({ roadmaps, onPathChange }: PathSelectorProps) {
   const [selected, setSelected] = useState<CareerRoadmap | null>(null);
 
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {roadmaps.map((r) => (
+        {roadmaps.map((r, idx) => (
           <PathCard
-            key={r.pathType}
+            key={`${r.pathType}-${idx}`}
             roadmap={r}
             isSelected={selected?.pathType === r.pathType}
-            onClick={() => setSelected(selected?.pathType === r.pathType ? null : r)}
+            onClick={() => {
+              const next = selected?.pathType === r.pathType ? null : r;
+              setSelected(next);
+              onPathChange?.(next?.pathType ?? null);
+            }}
           />
         ))}
       </div>

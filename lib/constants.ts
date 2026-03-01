@@ -65,3 +65,20 @@ export const SKILL_SUGGESTIONS: Record<string, string[]> = {
   Marketing: ['Digital Marketing', 'SEO', 'Analytics', 'Content Strategy', 'Social Media', 'Brand Management'],
   default: ['Communication', 'Leadership', 'Problem Solving', 'Project Management', 'Excel', 'Data Analysis'],
 };
+
+/** Fixed skills to assess per industry — same list every time for consistency (LinkedIn/JobsDB/Indeed/Glassdoor norms) */
+export const SKILLS_TO_ASSESS: Record<string, string[]> = {
+  Finance: ['Financial Modeling', 'HKFRS', 'Excel', 'Risk Management', 'SFC Compliance', 'Data Analytics', 'Python', 'ESG Reporting', 'Communication', 'Leadership'],
+  Legal: ['Contract Drafting', 'Legal Research', 'HK Law', 'Compliance', 'Due Diligence', 'Negotiation', 'Communication', 'Research', 'Document Management'],
+  Accounting: ['HKFRS', 'Tax Compliance', 'Audit', 'Financial Reporting', 'Excel', 'SAP', 'HKICPA', 'Data Analytics', 'ESG Reporting', 'Communication'],
+  Technology: ['JavaScript', 'Python', 'React', 'Cloud (AWS/Azure)', 'SQL', 'DevOps', 'Agile', 'Data Structures', 'API Development', 'Communication'],
+  Marketing: ['Digital Marketing', 'SEO', 'Analytics', 'Content Strategy', 'Social Media', 'Brand Management', 'Data Analysis', 'Communication', 'Project Management'],
+  Logistics: ['Supply Chain Management', 'Procurement', 'Excel', 'ERP', 'Data Analysis', 'Vendor Management', 'Communication', 'Problem Solving'],
+  Healthcare: ['Clinical Knowledge', 'Regulatory Compliance', 'Data Analysis', 'Patient Care', 'Communication', 'Healthcare Systems', 'Documentation'],
+  Education: ['Curriculum Design', 'Student Assessment', 'EdTech', 'Communication', 'Leadership', 'Data Analysis', 'Digital Literacy'],
+  'Real Estate': ['Property Valuation', 'Market Analysis', 'HK Property Law', 'Excel', 'Negotiation', 'Client Management', 'Communication'],
+  Retail: ['E-commerce', 'Inventory Management', 'Customer Service', 'Data Analysis', 'Excel', 'Communication', 'Sales'],
+  'F&B': ['Operations Management', 'Customer Service', 'Inventory', 'Health & Safety', 'Communication', 'Financial Management'],
+  Government: ['Policy Analysis', 'Regulatory Knowledge', 'Stakeholder Management', 'Communication', 'Data Analysis', 'Report Writing'],
+  Other: ['Communication', 'Leadership', 'Problem Solving', 'Project Management', 'Excel', 'Data Analysis', 'Stakeholder Management'],
+};

@@ -53,13 +53,20 @@ function OnboardingPage() {
         const raw = sessionStorage.getItem(PROFILE_STORAGE_KEY);
         if (raw) {
           const saved = JSON.parse(raw) as Partial<UserProfile>;
-          setProfileState(saved);
-          setProfile(saved as UserProfile);
-          setStep(2);
+          if (saved?.currentRole && saved?.industry) {
+            setProfileState(saved);
+            setProfile(saved as UserProfile);
+            setStep(2);
+          }
         }
       } catch {}
     }
   }, [searchParams, setProfile]);
+
+  // If step 2 but no profile, reset to step 1 (handles cleared storage / edge cases)
+  useEffect(() => {
+    if (step === 2 && !profile) setStep(1);
+  }, [step, profile]);
 
   useEffect(() => {
     if (!isGenerating) return;
@@ -82,14 +89,11 @@ function OnboardingPage() {
     try { sessionStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(p)); } catch {}
   };
 
-<<<<<<< HEAD
-=======
   const handleCVSuccess = (p: UserProfile) => {
     saveProfile(p);
     setStep(2);
   };
 
->>>>>>> 08b4043e0957b1042804934ecbffa1f81c46bbe5
   const handleManualComplete = (p: Partial<UserProfile>) => {
     saveProfile(p);
     setStep(2);
@@ -204,11 +208,7 @@ function OnboardingPage() {
                 </button>
                 <button
                   type="button"
-<<<<<<< HEAD
-                  onClick={() => { setInputMethod('manual'); setStep(2); }}
-=======
                   onClick={() => setInputMethod('manual')}
->>>>>>> 08b4043e0957b1042804934ecbffa1f81c46bbe5
                   className="p-6 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-all"
                 >
                   <div className="text-2xl mb-2">✏️</div>
@@ -222,14 +222,11 @@ function OnboardingPage() {
                   <CVUpload onSuccess={handleCVSuccess} />
                 </motion.div>
               )}
-<<<<<<< HEAD
-=======
               {inputMethod === 'manual' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8">
                   <RoleInput onComplete={handleManualComplete} />
                 </motion.div>
               )}
->>>>>>> 08b4043e0957b1042804934ecbffa1f81c46bbe5
             </motion.div>
           )}
 
