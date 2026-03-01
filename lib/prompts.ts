@@ -120,7 +120,9 @@ JSON STRUCTURE:
   "peerComparison":"1 honest sentence — where do they stand vs peers?",
   "futureForecast":["3-4 short titles"],
   "futureForecastDetail":[3-4 items: { "title":"", "explanation":"2 sentences with evidence", "dataUsed":"LinkedIn/JobsDB/Indeed/Glassdoor", "links":["url"] }]
-}`;
+}
+
+CRITICAL: Output ONLY the JSON object. No markdown, no \`\`\`json, no text before or after. Valid JSON only.`;
 
 export const ROADMAP_GENERATION_PROMPT = `You are a career coach for Hong Kong professionals. Generate THREE concise career roadmaps. Be brief.
 

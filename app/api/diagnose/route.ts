@@ -66,6 +66,12 @@ function buildFallbackDiagnosis(profile: UserProfile): SkillGapMap {
     industryInsights: ['Complete a full analysis to get personalised insights.'],
     peerComparison: 'Based on your profile.',
     futureForecast: ['Data & AI literacy', 'Digital transformation skills', 'Cross-border (GBA) awareness', 'ESG & sustainability'],
+    futureForecastDetail: [
+      { title: 'Data & AI literacy', explanation: 'HK job postings increasingly require data analysis and AI tools. Roles in finance, legal, and professional services now commonly list Python, Excel analytics, and AI-assisted workflows.', dataUsed: 'LinkedIn, JobsDB HK' },
+      { title: 'Digital transformation skills', explanation: 'Firms are digitising operations. Skills in process automation, cloud tools, and digital workflows are in rising demand across industries.', dataUsed: 'Indeed HK, Glassdoor' },
+      { title: 'Cross-border (GBA) awareness', explanation: 'Greater Bay Area initiatives create demand for understanding mainland-HK regulatory and business practices.', dataUsed: 'HK job market trends' },
+      { title: 'ESG & sustainability', explanation: 'HKEX and regulatory focus on ESG reporting drives demand for sustainability and governance knowledge.', dataUsed: 'LinkedIn, HK regulatory updates' },
+    ],
   };
 }
 
@@ -111,7 +117,9 @@ export async function POST(request: NextRequest) {
     const maxRetries = 3;
     let lastErr: unknown = null;
     let content: string | null = null;
+    let usedPrimary = true;
 
+    // --- Primary provider (MiniMax or Bedrock) with retries ---
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const completion = await openai.chat.completions.create({
@@ -127,17 +135,19 @@ export async function POST(request: NextRequest) {
         const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
         const isRetryable = msg.includes('fetch failed') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT') || msg.includes('UND_ERR_CONNECT_TIMEOUT') || msg.includes('network') || msg.includes('timeout');
         if (attempt < maxRetries && isRetryable) {
-          await new Promise((r) => setTimeout(r, 1000 * attempt));
+          await new Promise((r) => setTimeout(r, 1500 * attempt));
           continue;
         }
         break;
       }
     }
 
-    // Try Bedrock fallback if primary failed
+    // --- Bedrock fallback if primary failed or returned empty ---
     const bedrockClient = getBedrockClient();
     if (!content && bedrockClient) {
-      try {
+      usedPrimary = false;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
           const completion = await bedrockClient.chat.completions.create({
             model: BEDROCK_MODEL,
             messages: [{ role: 'user', content: prompt }],
@@ -145,8 +155,15 @@ export async function POST(request: NextRequest) {
             response_format: { type: 'json_object' },
           });
           content = completion.choices[0]?.message?.content ?? null;
-      } catch (bedrockErr) {
-        console.warn('Bedrock fallback failed:', bedrockErr);
+          if (content && typeof content === 'string') break;
+        } catch (bedrockErr) {
+          lastErr = bedrockErr;
+          if (attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, 1500 * attempt));
+          } else {
+            console.warn('Bedrock fallback failed after retries:', bedrockErr);
+          }
+        }
       }
     }
 
@@ -162,7 +179,43 @@ export async function POST(request: NextRequest) {
     try {
       parsed = parseJsonRobust<Record<string, unknown>>(content);
     } catch (parseErr) {
-      console.warn('AI JSON parse failed, using fallback diagnosis:', parseErr);
+      // Parse failed — try other provider before fallback (different model may return valid JSON)
+      const tryOtherProvider = (usedPrimary && bedrockClient) || (!usedPrimary && (process.env.MINIMAX_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.OPENAI_API_KEY));
+      if (tryOtherProvider) {
+        console.warn('AI JSON parse failed, retrying with other provider:', parseErr);
+        content = null;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            const completion = usedPrimary && bedrockClient
+              ? await bedrockClient.chat.completions.create({
+                  model: BEDROCK_MODEL,
+                  messages: [{ role: 'user', content: prompt }],
+                  temperature: 0,
+                  response_format: { type: 'json_object' },
+                })
+              : await openai.chat.completions.create({
+                  model: AI_MODEL,
+                  messages: [{ role: 'user', content: prompt }],
+                  temperature: 0,
+                  response_format: { type: 'json_object' },
+                });
+            content = completion.choices[0]?.message?.content ?? null;
+            if (content && typeof content === 'string') {
+              try {
+                parsed = parseJsonRobust<Record<string, unknown>>(content);
+                const diagnosis = mapToSkillGapMap(parsed, profile);
+                return NextResponse.json({ success: true, diagnosis });
+              } catch {
+                if (attempt < 2) await new Promise((r) => setTimeout(r, 2000));
+              }
+            }
+          } catch (retryErr) {
+            console.warn('Retry on parse failure:', retryErr);
+          }
+        }
+      }
+      // Both providers failed or returned unparseable JSON — use fallback only as last resort
+      console.warn('AI JSON parse failed after retries, using fallback diagnosis:', parseErr);
       const diagnosis = buildFallbackDiagnosis(profile as UserProfile);
       return NextResponse.json({ success: true, diagnosis });
     }
