@@ -6,9 +6,10 @@ import type { UserProfile } from '@/lib/types';
 
 interface CVUploadProps {
   onSuccess: (profile: UserProfile) => void;
+  onUseManual?: () => void;
 }
 
-export function CVUpload({ onSuccess }: CVUploadProps) {
+export function CVUpload({ onSuccess, onUseManual }: CVUploadProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -63,11 +64,11 @@ export function CVUpload({ onSuccess }: CVUploadProps) {
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-600 font-medium">Uploaded: {selectedFile.name}</p>
+            <p className="text-sm text-zinc-400 font-medium">Uploaded: {selectedFile.name}</p>
             <button
               type="button"
               onClick={handleClear}
-              className="text-sm text-slate-500 hover:text-slate-700 underline"
+              className="text-sm text-zinc-500 hover:text-zinc-300 underline"
             >
               Choose different file
             </button>
@@ -78,20 +79,29 @@ export function CVUpload({ onSuccess }: CVUploadProps) {
           )}
 
           {isLoading && (
-            <p className="text-sm text-slate-500 text-center">Extracting your profile...</p>
+            <p className="text-sm text-zinc-500 text-center">Extracting your profile...</p>
           )}
         </div>
       )}
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-sm">
+        <div className="p-4 bg-rose-950/40 border border-rose-800 rounded-lg text-rose-300 text-sm">
           <p className="font-medium">
             {error.toLowerCase().includes('cv') || error.toLowerCase().includes('resume') || error.toLowerCase().includes('receipt') || error.toLowerCase().includes('document')
               ? "This doesn't look like a CV"
               : 'Upload failed'}
           </p>
           <p className="mt-1">{error}</p>
-          <p className="mt-2 text-rose-600">Please upload a resume or CV with your work experience, skills, and education. Or use &quot;Tell us manually&quot;.</p>
+          <p className="mt-2 text-rose-400">Please upload a resume or CV with your work experience, skills, and education.</p>
+          {onUseManual && (
+            <button
+              type="button"
+              onClick={() => { setError(null); setSelectedFile(null); onUseManual(); }}
+              className="mt-3 w-full py-2.5 px-4 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-500 transition-colors"
+            >
+              Use Tell us manually instead →
+            </button>
+          )}
         </div>
       )}
     </div>

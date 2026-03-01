@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai, isOpenAIAvailable, AI_MODEL } from '@/lib/openai';
+import { openai, isOpenAIAvailable, AI_MODEL, getBedrockClient, BEDROCK_MODEL } from '@/lib/openai';
 import { buildSkillDiagnosisPrompt } from '@/lib/prompts';
 import { parseJsonRobust } from '@/lib/parseJsonResponse';
 import type { UserProfile, SkillGapMap, SkillAssessment } from '@/lib/types';
@@ -65,7 +65,7 @@ function buildFallbackDiagnosis(profile: UserProfile): SkillGapMap {
     topPriorities: commonGaps.slice(0, 3),
     industryInsights: ['Complete a full analysis to get personalised insights.'],
     peerComparison: 'Based on your profile.',
-    futureForecast: [`Senior ${profile.currentRole || 'Professional'}`, `${profile.industry || 'Industry'} Specialist`],
+    futureForecast: ['Data & AI literacy', 'Digital transformation skills', 'Cross-border (GBA) awareness', 'ESG & sustainability'],
   };
 }
 
@@ -79,6 +79,9 @@ function getApiErrorMessage(err: unknown): string {
   }
   if (msg.includes('429')) {
     return 'Too many requests. Please try again in a few minutes.';
+  }
+  if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('network')) {
+    return 'Could not reach the AI service (network error). Please try again — we\'ll retry with Bedrock if configured.';
   }
   return msg || 'Skill gap analysis failed. Please try again.';
 }
@@ -105,15 +108,51 @@ export async function POST(request: NextRequest) {
     }
 
     const prompt = buildSkillDiagnosisPrompt(profile as UserProfile);
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0,
-      response_format: { type: 'json_object' },
-    });
+    const maxRetries = 3;
+    let lastErr: unknown = null;
+    let content: string | null = null;
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content || typeof content !== 'string') throw new Error('No response from AI');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const completion = await openai.chat.completions.create({
+          model: AI_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0,
+          response_format: { type: 'json_object' },
+        });
+        content = completion.choices[0]?.message?.content ?? null;
+        if (content && typeof content === 'string') break;
+      } catch (apiErr) {
+        lastErr = apiErr;
+        const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+        const isRetryable = msg.includes('fetch failed') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT') || msg.includes('UND_ERR_CONNECT_TIMEOUT') || msg.includes('network') || msg.includes('timeout');
+        if (attempt < maxRetries && isRetryable) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt));
+          continue;
+        }
+        break;
+      }
+    }
+
+    // Try Bedrock fallback if primary failed
+    const bedrockClient = getBedrockClient();
+    if (!content && bedrockClient) {
+      try {
+          const completion = await bedrockClient.chat.completions.create({
+            model: BEDROCK_MODEL,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0,
+            response_format: { type: 'json_object' },
+          });
+          content = completion.choices[0]?.message?.content ?? null;
+      } catch (bedrockErr) {
+        console.warn('Bedrock fallback failed:', bedrockErr);
+      }
+    }
+
+    if (!content || typeof content !== 'string') {
+      throw lastErr ?? new Error('No response from AI');
+    }
     const stripped = content.trim().replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
     if (stripped.toLowerCase().includes('bad request') || (stripped.length < 100 && stripped.toLowerCase().includes('error'))) {
       throw new Error('API returned an error. Check your API key.');
@@ -240,10 +279,32 @@ function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile)
     strongCount,
     fadingCount,
     missingCount,
-    topPriorities: Array.isArray(parsed.topPriorities) ? parsed.topPriorities.map(String) : [],
-    industryInsights: Array.isArray(parsed.industryInsights) ? parsed.industryInsights.map(String) : [],
+    topPriorities: Array.isArray(parsed.topPriorities)
+      ? parsed.topPriorities.map((p: unknown) => (typeof p === 'string' ? p : String((p as Record<string, unknown>)?.title ?? (p as Record<string, unknown>)?.name ?? p)))
+      : [],
+    industryInsights: Array.isArray(parsed.industryInsights)
+      ? parsed.industryInsights.map((i: unknown) => {
+          if (typeof i === 'string') return i;
+          if (i && typeof i === 'object') {
+            const o = i as Record<string, unknown>;
+            const text = o.text ?? o.content ?? o.insight ?? o.title;
+            return typeof text === 'string' ? text : JSON.stringify(o).slice(0, 120);
+          }
+          return String(i);
+        })
+      : [],
     peerComparison: typeof parsed.peerComparison === 'string' ? parsed.peerComparison : '',
-    futureForecast: Array.isArray(parsed.futureForecast) ? parsed.futureForecast.map(String) : undefined,
+    futureForecast: Array.isArray(parsed.futureForecast)
+      ? parsed.futureForecast.map((f: unknown) => {
+          if (typeof f === 'string') return f;
+          if (f && typeof f === 'object') {
+            const o = f as Record<string, unknown>;
+            const title = o.title ?? o.name ?? o.skill ?? o.text;
+            return typeof title === 'string' ? title : JSON.stringify(o).slice(0, 80);
+          }
+          return String(f);
+        })
+      : undefined,
     futureForecastDetail: Array.isArray(parsed.futureForecastDetail)
       ? parsed.futureForecastDetail.map((d: Record<string, unknown>) => ({
           title: String(d.title ?? ''),

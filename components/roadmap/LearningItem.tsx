@@ -28,16 +28,16 @@ const RESOURCE_ICONS: Record<string, string> = {
 function ResourceBlock({ resource }: { resource: LearningResource }) {
   const icon = RESOURCE_ICONS[resource.type] || '📄';
   const content = (
-    <div className="flex gap-3 p-3 bg-white rounded-lg border border-slate-100 items-start">
+    <div className="flex gap-3 p-3 bg-zinc-800 rounded-lg border border-zinc-700 items-start">
       <span className="text-lg flex-shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-slate-800 text-sm">{resource.title}</div>
+        <div className="font-medium text-zinc-200 text-sm">{resource.title}</div>
         {resource.description && (
-          <p className="text-xs text-slate-600 mt-0.5">{resource.description}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">{resource.description}</p>
         )}
       </div>
       {resource.url && (
-        <span className="text-xs text-blue-600 font-medium flex-shrink-0">Open ↗</span>
+        <span className="text-xs text-emerald-400 font-medium flex-shrink-0">Open ↗</span>
       )}
     </div>
   );
@@ -47,7 +47,7 @@ function ResourceBlock({ resource }: { resource: LearningResource }) {
         href={resource.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block hover:border-blue-300 rounded-lg transition-colors border border-transparent"
+        className="block hover:border-emerald-500/50 rounded-lg transition-colors border border-transparent"
       >
         {content}
       </a>
@@ -66,24 +66,24 @@ export function LearningItem({ task }: LearningItemProps) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex flex-col gap-0 p-4 bg-slate-50 rounded-lg border border-slate-100"
+      className="flex flex-col gap-0 p-4 bg-zinc-800/50 rounded-lg border border-zinc-700"
     >
       <div className="flex gap-4">
         <span className="text-2xl flex-shrink-0">{icon}</span>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-slate-900">{task.title}</div>
-          <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+          <div className="font-medium text-zinc-100">{task.title}</div>
+          <p className="text-sm text-zinc-400 mt-1">{task.description}</p>
           <div className="flex flex-wrap gap-2 mt-2 items-center">
-            <span className="px-2 py-0.5 bg-white rounded text-xs font-medium">{task.duration}</span>
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">{task.skillTargeted}</span>
-            <span className="text-slate-400 text-xs">
+            <span className="px-2 py-0.5 bg-zinc-800 rounded text-xs font-medium text-zinc-300">{task.duration}</span>
+            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-xs">{task.skillTargeted}</span>
+            <span className="text-zinc-500 text-xs">
               {'•'.repeat(difficultyDots)} {task.difficulty}
             </span>
             {hasDetails && (
               <button
                 type="button"
                 onClick={() => setShowDetails(!showDetails)}
-                className="text-xs font-medium text-blue-600 hover:text-blue-800 ml-1"
+                className="text-xs font-medium text-emerald-400 hover:text-emerald-300 ml-1"
               >
                 {showDetails ? 'Hide details' : 'How to do this →'}
               </button>
@@ -100,16 +100,16 @@ export function LearningItem({ task }: LearningItemProps) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mt-4 pt-4 border-t border-slate-200 space-y-4 pl-12 sm:pl-14">
+            <div className="mt-4 pt-4 border-t border-zinc-700 space-y-4 pl-12 sm:pl-14">
               {task.learningGuide && (
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">How to approach this</h4>
-                  <p className="text-sm text-slate-700 leading-relaxed">{task.learningGuide}</p>
+                  <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">How to approach this</h4>
+                  <p className="text-sm text-zinc-400 leading-relaxed">{task.learningGuide}</p>
                 </div>
               )}
               {task.resources && task.resources.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Suggested resources</h4>
+                  <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Suggested resources</h4>
                   <div className="space-y-2">
                     {task.resources.map((resource, i) => (
                       <ResourceBlock key={i} resource={resource} />

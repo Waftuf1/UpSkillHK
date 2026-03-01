@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai, isOpenAIAvailable, AI_MODEL, IS_POE } from '@/lib/openai';
+import { openai, isOpenAIAvailable, AI_MODEL } from '@/lib/openai';
 
 const SYSTEM_PROMPT = `You are a friendly, knowledgeable career coach assistant embedded in a career roadmap tool for Hong Kong professionals.
 

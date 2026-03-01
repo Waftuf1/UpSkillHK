@@ -19,12 +19,12 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const base = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const base = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed';
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm',
-    secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 focus:ring-slate-400',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500',
-    ghost: 'text-slate-600 hover:bg-slate-100 focus:ring-slate-400',
+    primary: 'bg-emerald-600 text-white hover:bg-emerald-500 focus:ring-emerald-500',
+    secondary: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 focus:ring-zinc-600',
+    outline: 'border border-zinc-600 text-zinc-300 hover:bg-zinc-800 focus:ring-zinc-500',
+    ghost: 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 focus:ring-zinc-600',
   };
   const sizes = {
     sm: 'px-3 py-1.5 text-sm',

@@ -19,6 +19,7 @@
     "react-dom": "^18",
     "react-dropzone": "^15.0.0",
     "recharts": "^3.7.0",
+    "undici": "^7.22.0",
     "unpdf": "^1.4.0"
   },
   "devDependencies": {

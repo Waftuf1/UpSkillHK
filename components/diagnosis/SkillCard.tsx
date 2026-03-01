@@ -15,43 +15,39 @@ export function SkillCard({ skill, index }: SkillCardProps) {
   const trendIcon = skill.demandTrend === 'rising' ? '↑' : skill.demandTrend === 'stable' ? '→' : '↓';
   const statusBg =
     skill.status === 'strong'
-      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
       : skill.status === 'fading'
-        ? 'bg-amber-100 text-amber-800 border-amber-200'
-        : 'bg-rose-100 text-rose-800 border-rose-200';
+        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+        : 'bg-rose-500/20 text-rose-300 border-rose-500/30';
 
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm"
+      className="bg-zinc-800 rounded-xl border border-zinc-600 overflow-hidden"
     >
-      {/* Status + skill name header — impossible to miss */}
-      <div className={`px-4 py-3 border-b ${statusBg}`}>
+      <div className={`px-4 py-3 border-b border-zinc-700 ${statusBg}`}>
         <div className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">{statusLabel}</div>
-        <h4 className="font-bold text-xl leading-tight">{skill.skillName || 'Unnamed Skill'}</h4>
+        <h4 className="font-bold text-xl leading-tight text-zinc-100">{skill.skillName || 'Unnamed Skill'}</h4>
       </div>
       <div className="p-4">
-        {/* Meta: category, priority, trend */}
         <div className="flex items-center gap-2 flex-wrap mb-3">
           <Badge variant="default">{skill.category}</Badge>
           {skill.priority === 'critical' && <Badge variant="critical">Critical</Badge>}
-          <span className="text-slate-500 text-sm">{trendIcon} {skill.demandTrend}</span>
+          <span className="text-zinc-500 text-sm">{trendIcon} {skill.demandTrend}</span>
         </div>
-      {/* Data: your level & market demand with numbers */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <div className="text-xs text-slate-500 mb-1">Your level: {skill.userLevel}</div>
+          <div className="text-xs text-zinc-500 mb-1">Your level: {skill.userLevel}</div>
           <ProgressBar value={skill.userLevel} color="blue" />
         </div>
         <div>
-          <div className="text-xs text-slate-500 mb-1">Market demand: {skill.marketDemand}</div>
+          <div className="text-xs text-zinc-500 mb-1">Market demand: {skill.marketDemand}</div>
           <ProgressBar value={skill.marketDemand} color="amber" />
         </div>
       </div>
-      {/* Reasoning and time to acquire — always visible */}
-      <div className="pt-3 border-t border-slate-200 text-sm text-slate-600">
+      <div className="pt-3 border-t border-zinc-700 text-sm text-zinc-400">
         <p><strong>Why:</strong> {skill.reasoning}</p>
         {skill.timeToAcquire && (
           <p className="mt-2"><strong>Time to acquire:</strong> {skill.timeToAcquire}</p>

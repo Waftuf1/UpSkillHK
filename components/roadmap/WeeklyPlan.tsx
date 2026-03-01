@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MilestoneTimeline } from './MilestoneTimeline';
+import { PathPreview } from './PathPreview';
 import { LearningItem } from './LearningItem';
 import type { CareerRoadmap, LearningTask } from '@/lib/types';
 
@@ -41,12 +41,12 @@ export function WeeklyPlan({ roadmap, expandedWeek: controlledExpanded, onExpand
 
   return (
     <div className="space-y-8">
-      <MilestoneTimeline milestones={roadmap.milestones} />
+      <PathPreview roadmap={roadmap} />
 
       <div>
-        <h3 className="text-xl font-semibold text-slate-900 mb-1">Week-by-Week Plan</h3>
-        <p className="text-sm text-slate-500 mb-1">
-          {weeklyPlan.length} weeks · Full path: {roadmap.timeline}
+        <h3 className="text-xl font-semibold text-zinc-100 mb-1">Week-by-Week Plan</h3>
+        <p className="text-sm text-zinc-500 mb-1">
+          First {weeklyPlan.length} weeks of tasks below. Your full path runs {roadmap.timeline}.
         </p>
         <p className="text-sm text-slate-500 mb-4">
           Expand a week below to see tasks and resources.
@@ -55,7 +55,7 @@ export function WeeklyPlan({ roadmap, expandedWeek: controlledExpanded, onExpand
           {byMonth.map(({ monthLabel, weeks: monthWeeks }) => (
             <div key={monthLabel}>
               {showMonths && (
-                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">{monthLabel}</h4>
+                <h4 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-3">{monthLabel}</h4>
               )}
               <div className="space-y-4">
                 {monthWeeks.map((week) => {
@@ -65,20 +65,20 @@ export function WeeklyPlan({ roadmap, expandedWeek: controlledExpanded, onExpand
                       key={weekNum}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+                      className="bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden"
                     >
                       <button
                         type="button"
                         onClick={() => setExpandedWeek(expandedWeek === weekNum ? 0 : weekNum)}
-                        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-slate-50"
+                        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-zinc-800/50"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="font-bold text-blue-600">Week {weekNum}</span>
-                          <span className="text-slate-700">{week.theme}</span>
+                          <span className="font-bold text-emerald-400">Week {weekNum}</span>
+                          <span className="text-zinc-300">{week.theme}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-500">{week.estimatedHours ?? 0}h</span>
-                          <span className="text-slate-400">{expandedWeek === weekNum ? '−' : '+'}</span>
+                          <span className="text-sm text-zinc-500">{week.estimatedHours ?? 0}h</span>
+                          <span className="text-zinc-500">{expandedWeek === weekNum ? '−' : '+'}</span>
                         </div>
                       </button>
                       <AnimatePresence>
@@ -89,7 +89,7 @@ export function WeeklyPlan({ roadmap, expandedWeek: controlledExpanded, onExpand
                             exit={{ height: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="px-6 pb-6 pt-2 border-t border-slate-100 space-y-3">
+                            <div className="px-6 pb-6 pt-2 border-t border-zinc-800 space-y-3">
                               {(week.tasks ?? []).map((task, i) => (
                                 <LearningItem key={i} task={task as LearningTask} />
                               ))}

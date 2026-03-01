@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppHeader } from "@/components/layout/AppHeader";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const fontSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "UpSkill HK — AI-Powered Career Skill Diagnosis",
@@ -19,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased bg-slate-50 text-slate-900`}>
+      <body className={`${fontSans.variable} font-sans antialiased bg-zinc-950 text-zinc-100`}>
         <AuthProvider>
           <UserProvider>
             <AppHeader />

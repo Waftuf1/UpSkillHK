@@ -1,11 +1,11 @@
 'use client';
 
 import {
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   ResponsiveContainer,
   Legend,
   Tooltip,
@@ -31,7 +31,6 @@ export function SkillRadarChart({ skills }: SkillRadarChartProps) {
     subject: name.charAt(0).toUpperCase() + name.slice(1),
     user: Math.round(vals.user.reduce((a, b) => a + b, 0) / vals.user.length),
     market: Math.round(vals.market.reduce((a, b) => a + b, 0) / vals.market.length),
-    fullMark: 100,
   }));
 
   if (chartData.length === 0) return null;
@@ -41,21 +40,24 @@ export function SkillRadarChart({ skills }: SkillRadarChartProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.2 }}
-      className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"
+      className="bg-zinc-800 rounded-xl border border-zinc-600 p-6"
     >
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Skill Comparison</h3>
-      <p className="text-sm text-slate-500 mb-4">Your skills vs. Hong Kong market demand</p>
-      <div className="h-80">
+      <h3 className="text-lg font-semibold text-zinc-100 mb-1">Skill Comparison</h3>
+      <p className="text-sm text-zinc-500 mb-4">Your skills vs. Hong Kong market demand by category</p>
+      <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={chartData}>
-            <PolarGrid />
-            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12 }} />
-            <PolarRadiusAxis angle={30} domain={[0, 100]} />
-            <Radar name="Your Skills" dataKey="user" stroke="#2563EB" fill="#2563EB" fillOpacity={0.4} />
-            <Radar name="Market Demand" dataKey="market" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.2} strokeDasharray="5 5" />
+          <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+            <XAxis type="number" domain={[0, 100]} stroke="#71717a" tick={{ fill: '#a1a1aa', fontSize: 12 }} />
+            <YAxis type="category" dataKey="subject" stroke="#71717a" tick={{ fill: '#a1a1aa', fontSize: 12 }} width={70} />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px' }}
+              labelStyle={{ color: '#fafafa' }}
+            />
             <Legend />
-            <Tooltip />
-          </RadarChart>
+            <Bar name="Your Skills" dataKey="user" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+            <Bar name="Market Demand" dataKey="market" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} />
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </motion.div>

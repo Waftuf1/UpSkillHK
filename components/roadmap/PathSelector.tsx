@@ -16,6 +16,7 @@ export function PathSelector({ roadmaps, onPathChange }: PathSelectorProps) {
 
   return (
     <div className="space-y-8">
+      <p className="text-base text-white">Select a path below to view your week-by-week plan.</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {roadmaps.map((r, idx) => (
           <PathCard

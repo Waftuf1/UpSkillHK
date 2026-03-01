@@ -35,29 +35,29 @@ export function ProfileConfirm({ profile, onGenerate }: ProfileConfirmProps) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Confirm your profile</h1>
-      <p className="text-slate-600 text-sm">
+      <h1 className="text-2xl font-bold text-zinc-100">Confirm your profile</h1>
+      <p className="text-zinc-400 text-sm">
         This helps us compare you only to professionals in your field in Hong Kong — not across all industries.
       </p>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Job title / Role</label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Job title / Role</label>
           <input
             type="text"
             value={role}
             onChange={(e) => setRole(e.target.value)}
             placeholder="e.g. Senior Accountant, Marketing Manager"
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-2 border border-zinc-600 rounded-lg bg-zinc-900 text-zinc-100 placeholder:text-zinc-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Industry</label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Industry</label>
           <select
             value={industry}
             onChange={(e) => { setIndustry(e.target.value); setSubSector(''); }}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-zinc-600 rounded-lg bg-zinc-900 text-zinc-100 focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">Select industry</option>
             {INDUSTRIES.map((ind) => (
@@ -68,11 +68,11 @@ export function ProfileConfirm({ profile, onGenerate }: ProfileConfirmProps) {
 
         {subSectorOptions.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Sub-sector (optional)</label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Sub-sector (optional)</label>
             <select
               value={subSector}
               onChange={(e) => setSubSector(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-zinc-600 rounded-lg bg-zinc-900 text-zinc-100 focus:ring-2 focus:ring-emerald-500"
             >
               <option value="">Select sub-sector</option>
               {subSectorOptions.map((s) => (
@@ -83,7 +83,7 @@ export function ProfileConfirm({ profile, onGenerate }: ProfileConfirmProps) {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Seniority level</label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Seniority level</label>
           <div className="flex flex-wrap gap-2">
             {SENIORITY_OPTIONS.map((opt) => (
               <button
@@ -91,7 +91,7 @@ export function ProfileConfirm({ profile, onGenerate }: ProfileConfirmProps) {
                 type="button"
                 onClick={() => setSeniority(opt.value)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  seniority === opt.value ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  seniority === opt.value ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-300 border border-zinc-600 hover:border-zinc-500 hover:bg-zinc-700'
                 }`}
               >
                 {opt.label}
@@ -101,7 +101,7 @@ export function ProfileConfirm({ profile, onGenerate }: ProfileConfirmProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-zinc-300 mb-1">
             Years of experience: {yearsExperience}
           </label>
           <input
@@ -110,31 +110,31 @@ export function ProfileConfirm({ profile, onGenerate }: ProfileConfirmProps) {
             max={50}
             value={yearsExperience}
             onChange={(e) => setYearsExperience(parseInt(e.target.value, 10) || 0)}
-            className="w-full accent-blue-600"
+            className="w-full"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Primary career goal</label>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">Primary career goal</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {GOAL_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => setPrimaryGoal(opt.value)}
-                className={`p-4 rounded-xl text-left border-2 transition-colors ${
-                  primaryGoal === opt.value ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
+                className={`p-4 rounded-xl text-left border transition-colors ${
+                  primaryGoal === opt.value ? 'border-emerald-500 bg-emerald-500/20' : 'border-zinc-600 bg-zinc-800/50 hover:border-zinc-500'
                 }`}
               >
-                <div className="font-semibold text-slate-900">{opt.label}</div>
-                <div className="text-sm text-slate-600">{opt.description}</div>
+                <div className={`font-semibold ${primaryGoal === opt.value ? 'text-zinc-100' : 'text-zinc-300'}`}>{opt.label}</div>
+                <div className={`text-sm ${primaryGoal === opt.value ? 'text-zinc-400' : 'text-zinc-500'}`}>{opt.description}</div>
               </button>
             ))}
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-zinc-300 mb-1">
             Hours per week for learning: {weeklyHours}
           </label>
           <input
@@ -152,7 +152,7 @@ export function ProfileConfirm({ profile, onGenerate }: ProfileConfirmProps) {
         type="button"
         onClick={handleGenerate}
         disabled={!role.trim() || !industry}
-        className="w-full px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full px-8 py-4 bg-emerald-600 text-white rounded-xl font-semibold text-lg hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         Generate My Skill Map →
       </button>

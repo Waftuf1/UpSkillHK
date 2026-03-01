@@ -89,6 +89,7 @@ export interface Milestone {
 
 export interface WeekPlan {
   weekNumber: number;
+  week?: number; // API compatibility
   theme: string;
   tasks: LearningTask[];
   estimatedHours: number;

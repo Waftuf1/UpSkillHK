@@ -39,7 +39,7 @@ export function FileUpload({
       {...getRootProps()}
       className={`
         border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
-        ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}
+        ${isDragActive ? 'border-emerald-500 bg-emerald-500/20' : 'border-zinc-600 bg-zinc-800/80 hover:border-emerald-500/70 hover:bg-zinc-700/80'}
         ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}
       `}
     >
@@ -47,17 +47,17 @@ export function FileUpload({
       {isLoading ? (
         <div className="flex flex-col items-center gap-3">
           <WaffleSpinner size={48} />
-          <p className="text-slate-600">Extracting your profile...</p>
+          <p className="text-zinc-400">Extracting your profile...</p>
         </div>
       ) : (
         <>
-          <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mx-auto h-12 w-12 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <p className="mt-2 text-slate-600">
+          <p className="mt-2 text-zinc-300">
             {isDragActive ? 'Drop your file here' : 'Drag & drop your CV here, or click to browse'}
           </p>
-          <p className="mt-1 text-sm text-slate-500">PDF or DOCX, max 10MB</p>
+          <p className="mt-1 text-sm text-zinc-500">PDF or DOCX, max 10MB</p>
         </>
       )}
     </div>

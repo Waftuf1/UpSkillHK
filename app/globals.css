@@ -3,18 +3,63 @@
 @tailwind utilities;
 
 :root {
-  --background: #F8FAFC;
-  --foreground: #0F172A;
+  --background: #0a0a0b;
+  --foreground: #fafafa;
+  --muted: #71717a;
+  --border: #27272a;
+  --card: #18181b;
+  --accent: #10b981;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Range slider - dark theme */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: #27272a;
+  border-radius: 3px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  margin-top: -6px;
+  cursor: pointer;
+  border: 2px solid #0a0a0b;
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: #27272a;
+  border-radius: 3px;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  cursor: pointer;
+  border: 2px solid #0a0a0b;
+}
+
+/* Select options - dark theme */
+select option {
+  background: #18181b;
+  color: #fafafa;
 }

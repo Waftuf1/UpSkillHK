@@ -8,12 +8,12 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className = '' }: BadgeProps) {
   const variants = {
-    strong: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    fading: 'bg-amber-100 text-amber-800 border-amber-200',
-    missing: 'bg-rose-100 text-rose-800 border-rose-200',
-    critical: 'bg-rose-100 text-rose-800 border-rose-200 font-semibold',
-    important: 'bg-amber-100 text-amber-800 border-amber-200',
-    default: 'bg-slate-100 text-slate-700 border-slate-200',
+    strong: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    fading: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    missing: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+    critical: 'bg-rose-500/20 text-rose-400 border-rose-500/30 font-semibold',
+    important: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    default: 'bg-zinc-800 text-zinc-400 border-zinc-700',
   };
 
   return (

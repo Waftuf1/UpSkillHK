@@ -40,62 +40,62 @@ export default function SignUpPage() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <p className="text-slate-600">Sign up is not configured. Add Firebase env vars to enable auth.</p>
-          <Link href="/" className="mt-4 inline-block text-blue-600 hover:underline">← Back home</Link>
+          <p className="text-zinc-400">Sign up is not configured. Add Firebase env vars to enable auth.</p>
+          <Link href="/" className="mt-4 inline-block text-emerald-400 hover:text-emerald-300">← Back home</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-zinc-950">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-slate-900 mb-6 text-center">Create account</h1>
+        <h1 className="text-2xl font-bold text-zinc-100 mb-6 text-center">Create account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm password</label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Confirm password</label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-zinc-700 rounded-lg bg-zinc-900 text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             />
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-500 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Creating account...' : 'Sign up'}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-slate-600">
-          Already have an account? <Link href="/login" className="text-blue-600 hover:underline">Sign in</Link>
+        <p className="mt-4 text-center text-sm text-zinc-400">
+          Already have an account? <Link href="/login" className="text-emerald-400 hover:text-emerald-300">Sign in</Link>
         </p>
-        <Link href="/" className="mt-4 block text-center text-sm text-slate-500 hover:text-slate-700">← Back home</Link>
+        <Link href="/" className="mt-4 block text-center text-sm text-zinc-500 hover:text-zinc-300">← Back home</Link>
       </div>
     </div>
   );

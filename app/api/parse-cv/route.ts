@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai, isOpenAIAvailable, AI_MODEL } from '@/lib/openai';
+import { openai, isOpenAIAvailable, AI_MODEL, getBedrockClient, BEDROCK_MODEL } from '@/lib/openai';
 import { buildCVParsingPrompt, CV_PARSING_FROM_PDF_PROMPT } from '@/lib/prompts';
 import { parseJsonRobust } from '@/lib/parseJsonResponse';
 import type { UserProfile } from '@/lib/types';
@@ -131,6 +131,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Truncate very long CVs to avoid token limits (e.g. MiniMax context limits)
+    const MAX_CV_CHARS = 10000;
+    if (rawText.length > MAX_CV_CHARS) {
+      rawText = rawText.slice(0, MAX_CV_CHARS) + '\n\n[... truncated for length ...]';
+    }
+
     if (!isOpenAIAvailable() || !openai) {
       return NextResponse.json(
         { success: false, error: 'No API key configured. Add GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY, MINIMAX_API_KEY, or AWS_BEDROCK_API_KEY to .env.local and restart. Or use "Tell us manually" to skip CV upload.' },
@@ -138,14 +144,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    try {
-      const prompt = buildCVParsingPrompt(rawText);
-      const completion = await openai.chat.completions.create({
-        model: AI_MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0,
-        response_format: { type: 'json_object' },
-      });
+    const maxRetries = 4;
+    let lastErr: unknown = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const prompt = buildCVParsingPrompt(rawText);
+        const completion = await openai.chat.completions.create({
+          model: AI_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0,
+          response_format: { type: 'json_object' },
+        });
 
       const content = completion.choices[0]?.message?.content;
       if (!content || typeof content !== 'string') throw new Error('No response from AI');
@@ -173,19 +183,65 @@ export async function POST(request: NextRequest) {
       const profile = mapToUserProfile(parsed);
 
       return NextResponse.json({ success: true, profile });
-    } catch (apiErr) {
-      console.warn('AI parse failed:', apiErr);
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      let userMsg: string;
-      if (msg.includes('401') || msg.includes('User not found') || msg.includes('Invalid')) {
-        userMsg = 'Your API key is invalid or expired. Add a valid key to .env.local, or use "Tell us manually" to skip CV upload.';
-      } else if (msg.includes('Unexpected token') || msg.includes('JSON')) {
-        userMsg = 'The API returned an unexpected response. Check your API key and try again, or use "Tell us manually".';
-      } else {
-        userMsg = `CV parsing failed: ${msg}. Try "Tell us manually".`;
+      } catch (apiErr) {
+        lastErr = apiErr;
+        const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+        const isRetryable = msg.includes('fetch failed') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT') || msg.includes('UND_ERR_CONNECT_TIMEOUT') || msg.includes('network') || msg.includes('timeout');
+        if (attempt < maxRetries && isRetryable) {
+          await new Promise((r) => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+        break;
       }
-      return NextResponse.json({ success: false, error: userMsg }, { status: 502 });
     }
+
+    // MiniMax failed after retries — try Bedrock as fallback if configured
+    const bedrockClient = getBedrockClient();
+    if (bedrockClient) {
+      console.warn('Trying Bedrock fallback for CV parse');
+      try {
+        const prompt = buildCVParsingPrompt(rawText);
+        const completion = await bedrockClient.chat.completions.create({
+          model: BEDROCK_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0,
+          response_format: { type: 'json_object' },
+        });
+        const content = completion.choices[0]?.message?.content;
+        if (content && typeof content === 'string') {
+          const trimmed = content.trim();
+          if (!trimmed.toLowerCase().includes('bad request') && !trimmed.toLowerCase().startsWith('error')) {
+            let parsed: Record<string, unknown>;
+            try {
+              parsed = parseJsonRobust<Record<string, unknown>>(content);
+              if (parsed.isValidCV !== false) {
+                const profile = mapToUserProfile(parsed);
+                return NextResponse.json({ success: true, profile });
+              }
+            } catch {
+              // fall through to error
+            }
+          }
+        }
+      } catch (bedrockErr) {
+        console.warn('Bedrock fallback also failed:', bedrockErr);
+      }
+    }
+
+    const apiErr = lastErr;
+    console.warn('AI parse failed:', apiErr);
+    const msg = apiErr instanceof Error ? (apiErr as Error).message : String(apiErr);
+    let userMsg: string;
+    if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('UND_ERR_CONNECT_TIMEOUT') || msg.includes('network')) {
+      userMsg = 'Connection to the AI service timed out. This can happen on slow networks. Try again, or use "Tell us manually" to continue.';
+    } else if (msg.includes('401') || msg.includes('User not found') || msg.includes('Invalid')) {
+      userMsg = 'Your API key is invalid or expired. Add a valid key to .env.local, or use "Tell us manually" to skip CV upload.';
+    } else if (msg.includes('Unexpected token') || msg.includes('JSON')) {
+      userMsg = 'The API returned an unexpected response. Check your API key and try again, or use "Tell us manually".';
+    } else {
+      userMsg = `CV parsing failed: ${msg}. Try "Tell us manually".`;
+    }
+    return NextResponse.json({ success: false, error: userMsg }, { status: 502 });
   } catch (err) {
     console.error('parse-cv error:', err);
     return NextResponse.json(

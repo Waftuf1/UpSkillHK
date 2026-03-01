@@ -72,18 +72,17 @@ export function GapSummary({ data }: GapSummaryProps) {
   const rubric = data.rubric;
 
   const readinessColor =
-    score >= 70 ? 'text-emerald-600' : score >= 40 ? 'text-amber-600' : 'text-rose-600';
+    score >= 70 ? 'text-emerald-400' : score >= 40 ? 'text-amber-400' : 'text-rose-400';
   const barColor =
     score >= 70 ? 'bg-emerald-500' : score >= 40 ? 'bg-amber-500' : 'bg-rose-500';
   const rangeBg =
-    score >= 70 ? 'bg-emerald-200' : score >= 40 ? 'bg-amber-200' : 'bg-rose-200';
+    score >= 70 ? 'bg-emerald-500/30' : score >= 40 ? 'bg-amber-500/30' : 'bg-rose-500/30';
 
   return (
     <div className="space-y-8">
-      {/* Readiness score */}
-      <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
+      <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 p-8">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">Overall Readiness Score</h2>
+          <h2 className="text-xl font-bold text-zinc-100 mb-4">Overall Readiness Score</h2>
 
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -94,12 +93,12 @@ export function GapSummary({ data }: GapSummaryProps) {
             <div className={`text-6xl font-bold ${readinessColor}`}>
               <AnimatedCounter value={score} />
             </div>
-            <span className="text-slate-500 text-sm mt-1">out of 100</span>
+            <span className="text-zinc-500 text-sm mt-1">out of 100</span>
           </motion.div>
 
           {/* Confidence bar */}
           <div className="max-w-md mx-auto mb-6">
-            <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div className="relative h-3 bg-zinc-800 rounded-full overflow-hidden">
               <motion.div
                 className={`absolute top-0 h-full rounded-full ${rangeBg}`}
                 initial={{ width: 0, left: `${score}%` }}
@@ -114,9 +113,9 @@ export function GapSummary({ data }: GapSummaryProps) {
                 transition={{ duration: 0.8, delay: 0.3 }}
               />
             </div>
-            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+            <div className="flex justify-between text-xs text-zinc-500 mt-1.5">
               <span>0</span>
-              <span className="text-slate-500 font-medium">
+              <span className="text-zinc-400 font-medium">
                 Confidence range: {lo}–{hi}
               </span>
               <span>100</span>
@@ -126,8 +125,8 @@ export function GapSummary({ data }: GapSummaryProps) {
 
         {/* Rubric breakdown */}
         {rubric && (
-          <div className="border-t border-slate-100 pt-5 mt-2">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Score Breakdown</h3>
+          <div className="border-t border-zinc-800 pt-5 mt-2">
+            <h3 className="text-sm font-semibold text-zinc-300 mb-3">Score Breakdown</h3>
             <div className="space-y-3">
               {RUBRIC_ITEMS.map((item) => {
                 const val = rubric[item.key];
@@ -137,10 +136,10 @@ export function GapSummary({ data }: GapSummaryProps) {
                 return (
                   <div key={item.key}>
                     <div className="flex items-baseline justify-between text-sm mb-1">
-                      <span className="text-slate-700 font-medium">{item.label}</span>
-                      <span className="text-slate-500 text-xs">{val}/{item.max}</span>
+                      <span className="text-zinc-300 font-medium">{item.label}</span>
+                      <span className="text-zinc-500 text-xs">{val}/{item.max}</span>
                     </div>
-                    <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
                       <motion.div
                         className={`h-full rounded-full ${barCl}`}
                         initial={{ width: 0 }}
@@ -148,7 +147,7 @@ export function GapSummary({ data }: GapSummaryProps) {
                         transition={{ duration: 0.6, delay: 0.4 }}
                       />
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">{item.desc}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{item.desc}</p>
                   </div>
                 );
               })}
@@ -161,7 +160,7 @@ export function GapSummary({ data }: GapSummaryProps) {
           <button
             type="button"
             onClick={() => setShowCriteria(!showCriteria)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -179,24 +178,24 @@ export function GapSummary({ data }: GapSummaryProps) {
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="mt-4 border border-slate-200 rounded-xl bg-slate-50 p-6">
-                <h3 className="text-base font-bold text-slate-900 mb-1">Scoring Rubric</h3>
-                <p className="text-xs text-slate-500 mb-4">
+              <div className="mt-4 border border-zinc-600 rounded-xl bg-zinc-800/50 p-6">
+                <h3 className="text-base font-bold text-zinc-100 mb-1">Scoring Rubric</h3>
+                <p className="text-xs text-zinc-500 mb-4">
                   Your readiness score is calculated from 5 weighted components based on your CV compared against Hong Kong market data from the past 5 years (2020–2025).
                 </p>
                 <div className="space-y-4">
                   {RUBRIC_CRITERIA.map((c, i) => (
-                    <div key={i} className="bg-white rounded-lg border border-slate-200 p-4">
+                    <div key={i} className="bg-zinc-900/50 rounded-lg border border-zinc-700 p-4">
                       <div className="flex items-baseline justify-between mb-1">
-                        <h4 className="font-semibold text-slate-800 text-sm">{c.title}</h4>
-                        <span className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{c.weight}</span>
+                        <h4 className="font-semibold text-zinc-200 text-sm">{c.title}</h4>
+                        <span className="text-xs font-mono text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">{c.weight}</span>
                       </div>
-                      <p className="text-xs text-slate-500 font-mono mb-2">{c.formula}</p>
-                      <p className="text-sm text-slate-600">{c.detail}</p>
+                      <p className="text-xs text-zinc-500 font-mono mb-2">{c.formula}</p>
+                      <p className="text-sm text-zinc-400">{c.detail}</p>
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
+                <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-xs text-emerald-300">
                   <strong>Data sources:</strong> Market demand and trend data are sourced via AI web search from HK job boards (JobsDB, LinkedIn HK, jobs.gov.hk), regulatory bodies (HKMA, SFC, HKEX), and salary surveys. The confidence range reflects the statistical variance across your skill assessments.
                 </div>
               </div>
@@ -205,32 +204,32 @@ export function GapSummary({ data }: GapSummaryProps) {
         </AnimatePresence>
 
         {data.peerComparison && (
-          <p className="text-slate-600 mt-5 text-sm text-center">{data.peerComparison}</p>
+          <p className="text-zinc-400 mt-5 text-sm text-center">{data.peerComparison}</p>
         )}
       </div>
 
       {/* Counts */}
       <div className="grid grid-cols-3 gap-4">
-        <Card className="bg-rose-50 border-rose-200 text-center">
-          <div className="text-3xl font-bold text-rose-700">
+        <Card className="bg-rose-500/10 border-rose-500/30 text-center">
+          <div className="text-3xl font-bold text-rose-400">
             <AnimatedCounter value={data.missingCount} />
           </div>
-          <div className="text-rose-800 font-medium text-sm mt-1">Missing</div>
-          <div className="text-rose-600 text-xs mt-0.5">Not on your CV</div>
+          <div className="text-rose-300 font-medium text-sm mt-1">Missing</div>
+          <div className="text-rose-500/80 text-xs mt-0.5">Not on your CV</div>
         </Card>
-        <Card className="bg-amber-50 border-amber-200 text-center">
-          <div className="text-3xl font-bold text-amber-700">
+        <Card className="bg-amber-500/10 border-amber-500/30 text-center">
+          <div className="text-3xl font-bold text-amber-400">
             <AnimatedCounter value={data.fadingCount} />
           </div>
-          <div className="text-amber-800 font-medium text-sm mt-1">Fading</div>
-          <div className="text-amber-600 text-xs mt-0.5">On CV, declining demand</div>
+          <div className="text-amber-300 font-medium text-sm mt-1">Fading</div>
+          <div className="text-amber-500/80 text-xs mt-0.5">On CV, declining demand</div>
         </Card>
-        <Card className="bg-emerald-50 border-emerald-200 text-center">
-          <div className="text-3xl font-bold text-emerald-700">
+        <Card className="bg-emerald-500/10 border-emerald-500/30 text-center">
+          <div className="text-3xl font-bold text-emerald-400">
             <AnimatedCounter value={data.strongCount} />
           </div>
-          <div className="text-emerald-800 font-medium text-sm mt-1">Strong</div>
-          <div className="text-emerald-600 text-xs mt-0.5">On CV & in demand</div>
+          <div className="text-emerald-300 font-medium text-sm mt-1">Strong</div>
+          <div className="text-emerald-500/80 text-xs mt-0.5">On CV & in demand</div>
         </Card>
       </div>
     </div>

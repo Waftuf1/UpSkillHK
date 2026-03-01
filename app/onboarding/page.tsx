@@ -24,7 +24,7 @@ const LOADING_MESSAGES = [
 
 export default function OnboardingPageWrapper() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="animate-spin w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-zinc-950"><div className="animate-spin w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full" /></div>}>
       <OnboardingPage />
     </Suspense>
   );
@@ -157,29 +157,29 @@ function OnboardingPage() {
   if (isGenerating) {
     const pct = Math.round(loadingProgress);
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 px-4">
         <div className="text-center max-w-md w-full">
           <WaffleSpinner size={90} className="mx-auto mb-6" />
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">Generating your Skill Gap Map</h2>
-          <p className="text-slate-600 mb-5">{LOADING_MESSAGES[loadingMessageIndex]}</p>
-          <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+          <h2 className="text-xl font-semibold text-zinc-100 mb-2">Generating your Skill Gap Map</h2>
+          <p className="text-zinc-400 mb-5">{LOADING_MESSAGES[loadingMessageIndex]}</p>
+          <div className="w-full bg-zinc-800 rounded-full h-3 overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600"
+              className="h-full rounded-full bg-emerald-500"
               initial={{ width: '0%' }}
               animate={{ width: `${pct}%` }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
             />
           </div>
-          <p className="text-sm text-slate-500 mt-2 font-medium">{pct}%</p>
+          <p className="text-sm text-zinc-500 mt-2 font-medium">{pct}%</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4">
+    <div className="min-h-screen bg-zinc-950 py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <Link href="/" className="text-blue-600 hover:underline text-sm mb-6 inline-block">
+        <Link href="/" className="text-zinc-400 hover:text-zinc-100 text-sm mb-6 inline-block transition-colors">
           ← Back to home
         </Link>
 
@@ -194,32 +194,32 @@ function OnboardingPage() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
-              <p className="text-sm font-medium text-slate-500">Step 1 of 3</p>
-              <h1 className="text-2xl font-bold text-slate-900">How should we get to know you?</h1>
+              <p className="text-sm font-medium text-zinc-500">Step 1 of 3</p>
+              <h1 className="text-2xl font-bold text-zinc-100">How should we get to know you?</h1>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => setInputMethod('cv')}
-                  className="p-6 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-all"
+                  className="p-6 rounded-xl border border-zinc-600 bg-zinc-800/80 hover:border-emerald-500/50 hover:bg-zinc-700/80 text-left transition-all"
                 >
                   <div className="text-2xl mb-2">📤</div>
-                  <h3 className="font-semibold">Upload CV</h3>
-                  <p className="text-sm text-slate-600 mt-1">PDF or DOCX — we&apos;ll extract everything automatically</p>
+                  <h3 className="font-semibold text-zinc-100">Upload CV</h3>
+                  <p className="text-sm text-zinc-500 mt-1">PDF or DOCX — we&apos;ll extract everything automatically</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => setInputMethod('manual')}
-                  className="p-6 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-all"
+                  className="p-6 rounded-xl border border-zinc-600 bg-zinc-800/80 hover:border-emerald-500/50 hover:bg-zinc-700/80 text-left transition-all"
                 >
                   <div className="text-2xl mb-2">✏️</div>
-                  <h3 className="font-semibold">Tell us manually</h3>
-                  <p className="text-sm text-slate-600 mt-1">Answer 4 quick questions — takes 90 seconds</p>
+                  <h3 className="font-semibold text-zinc-100">Tell us manually</h3>
+                  <p className="text-sm text-zinc-500 mt-1">Answer 4 quick questions — takes 90 seconds</p>
                 </button>
               </div>
 
               {inputMethod === 'cv' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8">
-                  <CVUpload onSuccess={handleCVSuccess} />
+                  <CVUpload onSuccess={handleCVSuccess} onUseManual={() => setInputMethod('manual')} />
                 </motion.div>
               )}
               {inputMethod === 'manual' && (
@@ -236,14 +236,14 @@ function OnboardingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"
+              className="bg-zinc-900/50 rounded-xl border border-zinc-800 p-6"
             >
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-medium text-slate-500">Step 2 of 3</p>
+                <p className="text-sm font-medium text-zinc-500">Step 2 of 3</p>
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-emerald-500 hover:text-emerald-400 transition-colors"
                 >
                   ← Back to Step 1
                 </button>
@@ -256,7 +256,7 @@ function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => router.push('/diagnosis')}
-                  className="w-full mt-3 px-8 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                  className="w-full mt-3 px-8 py-3 bg-zinc-800 text-zinc-300 rounded-xl font-medium hover:bg-zinc-700 transition-colors"
                 >
                   View existing results (no changes) →
                 </button>

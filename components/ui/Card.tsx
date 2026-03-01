@@ -16,7 +16,7 @@ export function Card({ children, className = '', hover = false, onClick }: CardP
     <Component
       whileHover={hover ? { scale: 1.02 } : undefined}
       transition={{ duration: 0.2 }}
-      className={`bg-white rounded-xl shadow-sm border border-slate-200 p-6 ${onClick ? 'text-left w-full cursor-pointer' : ''} ${className}`}
+      className={`bg-zinc-900/50 rounded-xl border border-zinc-800 p-6 ${onClick ? 'text-left w-full cursor-pointer' : ''} ${className}`}
       onClick={onClick}
     >
       {children}
