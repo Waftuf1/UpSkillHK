@@ -5,7 +5,7 @@ const geminiKey = process.env.GOOGLE_GEMINI_API_KEY;
 const openRouterKey = process.env.OPENROUTER_API_KEY;
 const openaiKey = process.env.OPENAI_API_KEY;
 const minimaxKey = process.env.MINIMAX_API_KEY;
-const bedrockKey = process.env.AWS_BEDROCK_API_KEY;
+const bedrockKey = process.env.AWS_BEDROCK_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK;
 const bedrockRegion = process.env.AWS_BEDROCK_REGION || 'us-east-1';
 
 const apiKey = geminiKey || openRouterKey || openaiKey || minimaxKey || bedrockKey;
@@ -18,7 +18,7 @@ export const AI_MODEL = geminiKey
     : openaiKey
       ? 'gpt-4o'
       : bedrockKey
-        ? (process.env.AWS_BEDROCK_MODEL || 'anthropic.claude-3-5-sonnet-20241022-v2')
+        ? (process.env.AWS_BEDROCK_MODEL || 'anthropic.claude-sonnet-4-20250514-v1:0')
         : minimaxKey
           ? (process.env.MINIMAX_MODEL || 'M2-her')
           : 'gpt-4o';
@@ -128,7 +128,7 @@ export function getBedrockClient(): OpenAI | null {
   });
 }
 
-export const BEDROCK_MODEL = process.env.AWS_BEDROCK_MODEL || 'anthropic.claude-3-5-sonnet-20241022-v2';
+export const BEDROCK_MODEL = process.env.AWS_BEDROCK_MODEL || 'anthropic.claude-sonnet-4-20250514-v1:0';
 
 export function getConfiguredProviders(): { name: string; configured: boolean; active: boolean }[] {
   const activeProvider = geminiKey ? 'gemini' : openRouterKey ? 'openrouter' : openaiKey ? 'openai' : bedrockKey ? 'bedrock' : minimaxKey ? 'minimax' : null;
