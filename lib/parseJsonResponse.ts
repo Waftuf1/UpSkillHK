@@ -48,7 +48,7 @@ function tryRepairJson(str: string): string {
  * Try to close truncated JSON (AI hit token limit). Covers nested structures like
  * { "skills": [...], "topPriorities": [...] } and { "roadmaps": [...] }.
  */
-const TRUNCATED_SUFFIXES = ['}', ']', ']}', ']}'];
+const TRUNCATED_SUFFIXES = ['}', ']', ']}', '],"suitableJobs":[]}'];
 
 /**
  * Try multiple strategies to parse JSON from AI output.

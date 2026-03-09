@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai, isOpenAIAvailable, AI_MODEL } from '@/lib/openai';
+import { openai, isOpenAIAvailable, AI_MODEL, getBedrockClient, BEDROCK_MODEL } from '@/lib/openai';
 import { buildRoadmapPrompt } from '@/lib/prompts';
 import { parseJsonRobust } from '@/lib/parseJsonResponse';
 import type { SkillGapMap, CareerRoadmap, WeekPlan, LearningTask, LearningResource, Milestone } from '@/lib/types';
@@ -176,35 +176,53 @@ export async function POST(request: NextRequest) {
 
     const prompt = buildRoadmapPrompt(diagnosis, weeklyHours, formats, goal, targetRole);
 
-    const callAI = () =>
-      openai.chat.completions.create({
+    const callAI = (useBedrock = false) => {
+      const bedrock = getBedrockClient();
+      if (useBedrock && bedrock) {
+        return bedrock.chat.completions.create({
+          model: BEDROCK_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8,
+          max_tokens: 8192,
+          response_format: { type: 'json_object' },
+        });
+      }
+      return openai.chat.completions.create({
         model: AI_MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.8,
         max_tokens: 8192,
         response_format: { type: 'json_object' },
       });
+    };
 
     let content: string | null | undefined;
     let parsed: unknown;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const completion = await callAI();
-      content = completion.choices[0]?.message?.content;
-      if (!content || typeof content !== 'string') throw new Error('No response from AI');
-      const trimmed = content.trim();
-      if (trimmed.toLowerCase().includes('bad request') || (trimmed.length < 100 && trimmed.toLowerCase().includes('error'))) {
-        throw new Error('API returned an error. Check your API key.');
-      }
+    const providers: boolean[] = [false, false, true]; // primary x2, then Bedrock fallback
+    for (let attempt = 0; attempt < providers.length; attempt++) {
       try {
-        parsed = parseJsonRobust(content);
-        break;
-      } catch (parseErr) {
-        if (attempt === 1) {
-          console.error('Roadmap parse failed after retry:', parseErr);
-          throw new Error('AI returned invalid roadmap data. Please try again.');
+        const completion = await callAI(providers[attempt]);
+        content = completion.choices[0]?.message?.content;
+        if (!content || typeof content !== 'string') continue;
+        const trimmed = content.trim();
+        if (trimmed.toLowerCase().includes('bad request') || (trimmed.length < 100 && trimmed.toLowerCase().includes('error'))) continue;
+        try {
+          parsed = parseJsonRobust(content);
+          break;
+        } catch (parseErr) {
+          if (attempt < providers.length - 1) {
+            await new Promise((r) => setTimeout(r, 1500));
+          } else {
+            console.error('Roadmap parse failed after all retries:', parseErr, 'Snippet:', content?.slice(0, 300));
+            throw new Error('AI returned invalid roadmap data. Please try again.');
+          }
         }
+      } catch (apiErr) {
+        if (attempt === providers.length - 1) throw apiErr;
+        await new Promise((r) => setTimeout(r, 1500));
       }
     }
+    if (parsed === undefined) throw new Error('No response from AI');
     const parsedObj = parsed as Record<string, unknown>;
     const rawRoadmaps = Array.isArray(parsedObj?.roadmaps) ? parsedObj.roadmaps : (Array.isArray(parsed) ? parsed : [parsed]);
     let roadmaps = normalizeRoadmaps((rawRoadmaps as Record<string, unknown>[]).slice(0, 10), weeklyHours);
