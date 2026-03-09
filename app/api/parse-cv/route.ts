@@ -169,7 +169,12 @@ export async function POST(request: NextRequest) {
       let parsed: Record<string, unknown>;
       try {
         parsed = parseJsonRobust<Record<string, unknown>>(content);
-      } catch {
+      } catch (parseErr) {
+        console.warn('CV parse attempt', attempt, 'failed:', parseErr);
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 1500 * attempt));
+          continue;
+        }
         throw new Error('Could not read structured response from API. Try again or use "Tell us manually".');
       }
 
@@ -206,6 +211,7 @@ export async function POST(request: NextRequest) {
           model: BEDROCK_MODEL,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0,
+          max_tokens: 4096,
           response_format: { type: 'json_object' },
         });
         const content = completion.choices[0]?.message?.content;
@@ -237,7 +243,7 @@ export async function POST(request: NextRequest) {
       userMsg = 'Connection to the AI service timed out. This can happen on slow networks. Try again, or use "Tell us manually" to continue.';
     } else if (msg.includes('401') || msg.includes('User not found') || msg.includes('Invalid')) {
       userMsg = 'Your API key is invalid or expired. Add a valid key to .env.local, or use "Tell us manually" to skip CV upload.';
-    } else if (msg.includes('Unexpected token') || msg.includes('JSON') || msg.includes('Could not parse')) {
+    } else if (msg.includes('Unexpected token') || msg.includes('JSON') || msg.includes('Could not parse') || msg.includes('Could not read structured')) {
       userMsg = 'The API returned an unexpected response. Try again — it usually works on retry. Or use "Tell us manually" to skip.';
     } else {
       userMsg = `CV parsing failed: ${msg}. Try "Tell us manually".`;
