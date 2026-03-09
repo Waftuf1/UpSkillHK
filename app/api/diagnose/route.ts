@@ -230,8 +230,9 @@ export async function POST(request: NextRequest) {
 }
 
 function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile): SkillGapMap {
-  const skills = Array.isArray(parsed.skills)
-    ? parsed.skills.map((s: Record<string, unknown>) => {
+  const rawSkills = parsed.skills ?? parsed.skillAssessments ?? parsed.assessments ?? [];
+  const skills = Array.isArray(rawSkills)
+    ? rawSkills.map((s: Record<string, unknown>) => {
         const userLevel = typeof s.userLevel === 'number' ? s.userLevel : 50;
         const marketDemand = typeof s.marketDemand === 'number' ? s.marketDemand : 50;
         const demandTrend: 'rising' | 'stable' | 'declining' =
@@ -279,10 +280,14 @@ function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile)
       })
     : [];
 
-  const total = skills.length || 1;
-  const strongSkills = skills.filter((s) => s.status === 'strong');
-  const fadingSkills = skills.filter((s) => s.status === 'fading');
-  const missingSkills = skills.filter((s) => s.status === 'missing');
+  // If AI returned no skills, use fallback to avoid broken 0/0/0 diagnosis
+  const fallback = buildFallbackDiagnosis(profile);
+  const finalSkills = skills.length > 0 ? skills : fallback.skills;
+
+  const total = finalSkills.length || 1;
+  const strongSkills = finalSkills.filter((s) => s.status === 'strong');
+  const fadingSkills = finalSkills.filter((s) => s.status === 'fading');
+  const missingSkills = finalSkills.filter((s) => s.status === 'missing');
   const criticalMissingSkills = missingSkills.filter((s) => s.priority === 'critical');
   const strongCount = strongSkills.length;
   const fadingCount = fadingSkills.length;
@@ -328,13 +333,13 @@ function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile)
     role: typeof parsed.role === 'string' ? parsed.role : profile.currentRole,
     overallReadiness,
     rubric,
-    skills,
+    skills: finalSkills,
     strongCount,
     fadingCount,
     missingCount,
-    topPriorities: Array.isArray(parsed.topPriorities)
+    topPriorities: Array.isArray(parsed.topPriorities) && parsed.topPriorities.length > 0
       ? parsed.topPriorities.map((p: unknown) => (typeof p === 'string' ? p : String((p as Record<string, unknown>)?.title ?? (p as Record<string, unknown>)?.name ?? p)))
-      : [],
+      : finalSkills === fallback.skills ? fallback.topPriorities : [],
     industryInsights: Array.isArray(parsed.industryInsights)
       ? parsed.industryInsights.map((i: unknown) => {
           if (typeof i === 'string') return i;
