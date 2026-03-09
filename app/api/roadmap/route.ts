@@ -266,7 +266,20 @@ export async function POST(request: NextRequest) {
       for (let i = 0; i < targetWeeks; i++) {
         const src = plan[i % plan.length];
         const theme = i < plan.length ? src.theme : `${plan[0].theme} (continued)`;
-        expanded.push({ ...src, weekNumber: i + 1, theme });
+        let tasks = src.tasks ?? [];
+        if (tasks.length === 0 && plan[0].tasks?.length) tasks = plan[0].tasks;
+        if (tasks.length === 0) {
+          tasks = [{
+            title: theme,
+            format: 'reading' as const,
+            duration: '30 min',
+            description: 'Explore this topic. Search for tutorials and practice.',
+            skillTargeted: theme.split(' ')[0] ?? 'Skills',
+            difficulty: 'beginner' as const,
+            resources: [{ type: 'video' as const, title: 'YouTube search', url: `https://www.youtube.com/results?search_query=${encodeURIComponent(theme)}` }],
+          }];
+        }
+        expanded.push({ ...src, weekNumber: i + 1, theme, tasks });
       }
       return { ...r, weeklyPlan: expanded };
     });

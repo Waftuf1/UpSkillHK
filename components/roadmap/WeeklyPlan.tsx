@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { PathPreview } from './PathPreview';
 import { LearningItem } from './LearningItem';
 import type { CareerRoadmap, LearningTask } from '@/lib/types';
@@ -83,22 +83,19 @@ export function WeeklyPlan({ roadmap, expandedWeek: controlledExpanded, onExpand
                           <span className="text-zinc-500">{expandedWeek === weekNum ? '−' : '+'}</span>
                         </div>
                       </button>
-                      <AnimatePresence>
-                        {expandedWeek === weekNum && (
-                          <motion.div
-                            initial={{ height: 0 }}
-                            animate={{ height: 'auto' }}
-                            exit={{ height: 0 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="px-6 pb-6 pt-2 border-t border-zinc-800 space-y-3">
-                              {(week.tasks ?? []).map((task, i) => (
+                      {expandedWeek === weekNum && (
+                        <div className="border-t border-zinc-800">
+                          <div className="px-6 pb-6 pt-4 space-y-3">
+                            {(week.tasks ?? []).length > 0 ? (
+                              (week.tasks ?? []).map((task, i) => (
                                 <LearningItem key={i} task={task as LearningTask} />
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                              ))
+                            ) : (
+                              <p className="text-sm text-zinc-500 italic">No tasks for this week yet. Check back after we regenerate your plan.</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   );
                 })}
