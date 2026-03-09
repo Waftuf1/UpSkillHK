@@ -127,7 +127,7 @@ function getSuitableJobsFromDiagnosis(diagnosis: SkillGapMap): string[] {
 function getWeekSkillRank(week: WeekPlan, priorities: string[]): number {
   const theme = (week.theme ?? '').toLowerCase();
   if (theme.includes('integrat')) return 999; // Integration week always last
-  const skills = [...new Set((week.tasks ?? []).map((t) => (t.skillTargeted ?? '').toLowerCase()).filter(Boolean))];
+  const skills = Array.from(new Set((week.tasks ?? []).map((t) => (t.skillTargeted ?? '').toLowerCase()).filter(Boolean)));
   const matchStr = [theme, ...skills].join(' ');
   for (let i = 0; i < priorities.length; i++) {
     const p = priorities[i].toLowerCase();
