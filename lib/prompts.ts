@@ -126,6 +126,12 @@ CRITICAL: Output ONLY the JSON object. No markdown, no \`\`\`json, no text befor
 
 export const ROADMAP_GENERATION_PROMPT = `You are a career coach for Hong Kong professionals. Generate THREE concise career roadmaps. Be brief.
 
+=== THIS USER (use for personalisation — different CV = different output) ===
+Role: {userRole} | Industry: {userIndustry}
+Top 3 skills to learn (in order): {topPriorities}
+WRONG: Week 1 "ESG & HKEX Rules" for everyone. RIGHT: Week 1 = "{topPriority1}" (their #1 gap).
+=== END ===
+
 SKILL GAP MAP:
 {skillGapMap}
 
@@ -138,9 +144,9 @@ PATH B "Level Up" (6-12mo): Next seniority. pathType: "level_up"
 PATH C "Pivot" (12-18mo): Adjacent field. pathType: "pivot"
 
 CRITICAL — Personalisation (DO NOT IGNORE):
-- Week 1 theme MUST be the user's #1 topPriorities skill (e.g. if topPriorities=["Python","Data Analytics"], Week 1 = "Python Basics" or "Python Foundations", NOT "ESG").
-- Week 2 = their #2 priority, Week 3 = #3, etc. Order weeks by their topPriorities.
-- Each path's weeklyPlan MUST differ based on this user's role, industry, and skill gaps. Never copy a generic template.
+- Week 1 theme MUST be "{topPriority1}" or a close variant (e.g. "Python Basics" if topPriority1=Python). NEVER default to ESG first.
+- Week 2 = "{topPriority2}", Week 3 = "{topPriority3}". Order weeks by their topPriorities.
+- Each path's weeklyPlan MUST reflect THIS user's role ({userRole}) and industry ({userIndustry}). Different CVs = different tasks.
 
 For EACH path: title, subtitle, timeline, weeklyCommitment, targetOutcome, milestones (3-4), weeklyPlan (6-8 weeks, 2-3 tasks/week). Each task: title, format, duration, description, skillTargeted, difficulty, resources: [{ type, title, url }].
 
@@ -195,7 +201,18 @@ export function buildRoadmapPrompt(
   goal: string,
   targetRole?: string
 ): string {
+  const top = skillGapMap.topPriorities ?? [];
+  const p1 = top[0] || 'Key skills';
+  const p2 = top[1] || 'key skills';
+  const p3 = top[2] || 'key skills';
+  const topStr = top.length ? top.join(', ') : 'Not specified';
   return ROADMAP_GENERATION_PROMPT.replace('{skillGapMap}', JSON.stringify(skillGapMap, null, 2))
+    .replace('{userRole}', skillGapMap.role || 'Professional')
+    .replace('{userIndustry}', skillGapMap.industry || 'Other')
+    .replace('{topPriorities}', topStr)
+    .replace(/{topPriority1}/g, p1)
+    .replace(/{topPriority2}/g, p2)
+    .replace(/{topPriority3}/g, p3)
     .replace('{weeklyHours}', String(weeklyHours))
     .replace('{formats}', formats.join(', '))
     .replace('{goal}', goal)
