@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { openai, isOpenAIAvailable, AI_MODEL } from '@/lib/openai';
 import { buildRoadmapPrompt } from '@/lib/prompts';
 import { parseJsonRobust } from '@/lib/parseJsonResponse';
-import { MOCK_ROADMAPS } from '@/lib/mockData';
 import type { SkillGapMap, CareerRoadmap, WeekPlan, LearningTask, LearningResource, Milestone } from '@/lib/types';
 
 const PATH_TITLES: Record<string, string> = {
@@ -115,30 +114,29 @@ function normalizeRoadmaps(raw: unknown[], weeklyHours: number): CareerRoadmap[]
   });
 }
 
-function getSuitableJobsFromDiagnosis(diagnosis: SkillGapMap): string[] {
-  const role = diagnosis.role || 'Professional';
-  const industry = diagnosis.industry || 'your field';
-  const base = [role, `Senior ${role}`, `${role} (${industry})`];
-  if (industry !== 'your field') base.push(`${industry} Manager`, `${industry} Specialist`);
-  return Array.from(new Set(base)).slice(0, 6);
+/** Reorder weeks so Week 1 matches user's #1 priority — AI often returns same order regardless of prompt */
+function getWeekPriority(week: WeekPlan, priorities: string[]): number {
+  const theme = (week.theme ?? '').toLowerCase();
+  if (theme.includes('integrat')) return 999;
+  const skills = Array.from(new Set((week.tasks ?? []).map((t) => (t.skillTargeted ?? '').toLowerCase()).filter(Boolean)));
+  const matchStr = [theme, ...skills].join(' ');
+  for (let i = 0; i < priorities.length; i++) {
+    const p = priorities[i].toLowerCase();
+    const tokens = p.split(/\s+/).filter((t) => t.length > 2);
+    if (tokens.some((t) => matchStr.includes(t) || theme.includes(t))) return i;
+  }
+  return priorities.length;
 }
 
-function getPersonalizedRoadmaps(diagnosis: SkillGapMap, weeklyHours: number): CareerRoadmap[] {
-  const role = diagnosis.role || 'Professional';
-  const industry = diagnosis.industry || 'your field';
-  const priorities = diagnosis.topPriorities?.length ? diagnosis.topPriorities.slice(0, 3) : ['Key skills'];
-  const hours = `${weeklyHours}-${weeklyHours + 1} hours/week`;
-
-  return MOCK_ROADMAPS.map((r) => ({
-    ...r,
-    weeklyCommitment: hours,
-    targetOutcome:
-      r.pathType === 'stay_dominate'
-        ? `Master ${priorities[0]} and ${priorities[1] || 'key skills'} to secure your ${role} role in ${industry}`
-        : r.pathType === 'level_up'
-          ? `Advance to ${role} or next senior level in ${industry}`
-          : `Move into high-growth adjacent field in ${industry}`,
-  }));
+function reorderWeeksByPriorities(roadmaps: CareerRoadmap[], priorities: string[]): CareerRoadmap[] {
+  if (!priorities.length) return roadmaps;
+  return roadmaps.map((r) => {
+    const plan = r.weeklyPlan ?? [];
+    if (plan.length < 2) return r;
+    const sorted = [...plan].sort((a, b) => getWeekPriority(a, priorities) - getWeekPriority(b, priorities));
+    const reordered = sorted.map((w, i) => ({ ...w, weekNumber: i + 1 }));
+    return { ...r, weeklyPlan: reordered };
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -164,9 +162,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isOpenAIAvailable() || !openai) {
-      const roadmaps = getPersonalizedRoadmaps(diagnosis, weeklyHours);
-      const suitableJobs = getSuitableJobsFromDiagnosis(diagnosis);
-      return NextResponse.json({ success: true, roadmaps, suitableJobs });
+      return NextResponse.json(
+        { success: false, error: 'No AI API key configured. Add GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY, MINIMAX_API_KEY, or AWS_BEDROCK_API_KEY to .env.local.' },
+        { status: 503 }
+      );
     }
 
     const prompt = buildRoadmapPrompt(diagnosis, weeklyHours, formats, goal, targetRole);
@@ -174,7 +173,7 @@ export async function POST(request: NextRequest) {
     const completion = await openai.chat.completions.create({
       model: AI_MODEL,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0,
+      temperature: 0.8,
       max_tokens: 4096,
       response_format: { type: 'json_object' },
     });
@@ -189,16 +188,23 @@ export async function POST(request: NextRequest) {
     try {
       parsed = parseJsonRobust(content);
     } catch {
-      if (diagnosis) {
-        const roadmaps = getPersonalizedRoadmaps(diagnosis, weeklyHours);
-        const suitableJobs = getSuitableJobsFromDiagnosis(diagnosis);
-        return NextResponse.json({ success: true, roadmaps, suitableJobs });
-      }
-      throw new Error('Invalid API response. Please try again.');
+      throw new Error('AI returned invalid roadmap data. Please try again.');
     }
     const parsedObj = parsed as Record<string, unknown>;
     const rawRoadmaps = Array.isArray(parsedObj?.roadmaps) ? parsedObj.roadmaps : (Array.isArray(parsed) ? parsed : [parsed]);
-    const roadmaps = normalizeRoadmaps(rawRoadmaps as Record<string, unknown>[], weeklyHours);
+    let roadmaps = normalizeRoadmaps(rawRoadmaps as Record<string, unknown>[], weeklyHours);
+    const fromTop = diagnosis.topPriorities?.filter((p) => p && p !== 'Key skills').slice(0, 3) ?? [];
+    const fromSkills =
+      fromTop.length === 0
+        ? (diagnosis.skills ?? [])
+            .filter((s) => s.status === 'missing' && (s.priority === 'critical' || s.priority === 'important'))
+            .sort((a, b) => (b.marketDemand ?? 0) - (a.marketDemand ?? 0))
+            .slice(0, 3)
+            .map((s) => s.skillName)
+        : [];
+    const priorities = fromTop.length ? fromTop : fromSkills;
+    roadmaps = reorderWeeksByPriorities(roadmaps, priorities);
+
     const suitableJobs = Array.isArray(parsedObj?.suitableJobs)
       ? (parsedObj.suitableJobs as string[]).filter((j): j is string => typeof j === 'string')
       : [];
@@ -206,11 +212,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, roadmaps, suitableJobs });
   } catch (err) {
     console.error('roadmap error:', err);
-    if (diagnosis) {
-      const roadmaps = getPersonalizedRoadmaps(diagnosis, weeklyHours);
-      const suitableJobs = getSuitableJobsFromDiagnosis(diagnosis);
-      return NextResponse.json({ success: true, roadmaps, suitableJobs });
-    }
     const msg = err instanceof Error ? err.message : String(err);
     const userMsg = msg.includes('401') || msg.includes('Invalid') ? 'Your API key is invalid or expired. Check .env.local.' : msg;
     return NextResponse.json({ success: false, error: userMsg }, { status: 502 });

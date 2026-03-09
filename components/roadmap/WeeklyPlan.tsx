@@ -74,7 +74,9 @@ export function WeeklyPlan({ roadmap, expandedWeek: controlledExpanded, onExpand
                       >
                         <div className="flex items-center gap-3">
                           <span className="font-bold text-emerald-400">Week {weekNum}</span>
-                          <span className="text-zinc-300">{week.theme}</span>
+                          {week.theme && week.theme !== `Week ${weekNum}` && (
+                            <span className="text-zinc-300">{week.theme}</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-zinc-500">{week.estimatedHours ?? 0}h</span>
