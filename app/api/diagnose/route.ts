@@ -13,7 +13,7 @@ function getApiErrorMessage(err: unknown): string {
     return 'The AI did not return skill assessments. Please try again — upload your CV or complete the form and retry.';
   }
   if (msg.includes('401') || msg.includes('User not found') || msg.includes('Invalid key') || msg.includes('invalid_api_key')) {
-    return 'Your API key is invalid or expired. Check GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, MINIMAX_API_KEY, AWS_BEDROCK_API_KEY, or OPENAI_API_KEY in .env.local and restart the server.';
+    return 'Your API key is invalid or expired. Check AWS_BEDROCK_API_KEY or AWS_BEARER_TOKEN_BEDROCK in .env.local and restart the server.';
   }
   if (msg.includes('402') || msg.includes('credits')) {
     return 'Insufficient API credits. Add credits or use a different key.';
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (!isOpenAIAvailable() || !openai) {
       return NextResponse.json(
-        { success: false, error: 'No API key configured. Add GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, MINIMAX_API_KEY, AWS_BEDROCK_API_KEY, or OPENAI_API_KEY to .env.local and restart the server.' },
+        { success: false, error: 'No API key configured. Add AWS_BEDROCK_API_KEY or AWS_BEARER_TOKEN_BEDROCK to .env.local and restart the server.' },
         { status: 503 }
       );
     }

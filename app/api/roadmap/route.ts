@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
 
     if (!isOpenAIAvailable() || !openai) {
       return NextResponse.json(
-        { success: false, error: 'No AI API key configured. Add GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY, MINIMAX_API_KEY, or AWS_BEDROCK_API_KEY to .env.local.' },
+        { success: false, error: 'No AI API key configured. Add AWS_BEDROCK_API_KEY or AWS_BEARER_TOKEN_BEDROCK to .env.local.' },
         { status: 503 }
       );
     }
