@@ -114,6 +114,31 @@ function normalizeRoadmaps(raw: unknown[], weeklyHours: number): CareerRoadmap[]
   });
 }
 
+/** Reorder weeks so Week 1 matches user's #1 priority — AI often returns same order regardless of prompt */
+function getWeekPriority(week: WeekPlan, priorities: string[]): number {
+  const theme = (week.theme ?? '').toLowerCase();
+  if (theme.includes('integrat')) return 999;
+  const skills = Array.from(new Set((week.tasks ?? []).map((t) => (t.skillTargeted ?? '').toLowerCase()).filter(Boolean)));
+  const matchStr = [theme, ...skills].join(' ');
+  for (let i = 0; i < priorities.length; i++) {
+    const p = priorities[i].toLowerCase();
+    const tokens = p.split(/\s+/).filter((t) => t.length > 2);
+    if (tokens.some((t) => matchStr.includes(t) || theme.includes(t))) return i;
+  }
+  return priorities.length;
+}
+
+function reorderWeeksByPriorities(roadmaps: CareerRoadmap[], priorities: string[]): CareerRoadmap[] {
+  if (!priorities.length) return roadmaps;
+  return roadmaps.map((r) => {
+    const plan = r.weeklyPlan ?? [];
+    if (plan.length < 2) return r;
+    const sorted = [...plan].sort((a, b) => getWeekPriority(a, priorities) - getWeekPriority(b, priorities));
+    const reordered = sorted.map((w, i) => ({ ...w, weekNumber: i + 1 }));
+    return { ...r, weeklyPlan: reordered };
+  });
+}
+
 export async function POST(request: NextRequest) {
   let diagnosis: SkillGapMap | null = null;
   let weeklyHours = 5;
@@ -167,7 +192,19 @@ export async function POST(request: NextRequest) {
     }
     const parsedObj = parsed as Record<string, unknown>;
     const rawRoadmaps = Array.isArray(parsedObj?.roadmaps) ? parsedObj.roadmaps : (Array.isArray(parsed) ? parsed : [parsed]);
-    const roadmaps = normalizeRoadmaps(rawRoadmaps as Record<string, unknown>[], weeklyHours);
+    let roadmaps = normalizeRoadmaps(rawRoadmaps as Record<string, unknown>[], weeklyHours);
+    const fromTop = diagnosis.topPriorities?.filter((p) => p && p !== 'Key skills').slice(0, 3) ?? [];
+    const fromSkills =
+      fromTop.length === 0
+        ? (diagnosis.skills ?? [])
+            .filter((s) => s.status === 'missing' && (s.priority === 'critical' || s.priority === 'important'))
+            .sort((a, b) => (b.marketDemand ?? 0) - (a.marketDemand ?? 0))
+            .slice(0, 3)
+            .map((s) => s.skillName)
+        : [];
+    const priorities = fromTop.length ? fromTop : fromSkills;
+    roadmaps = reorderWeeksByPriorities(roadmaps, priorities);
+
     const suitableJobs = Array.isArray(parsedObj?.suitableJobs)
       ? (parsedObj.suitableJobs as string[]).filter((j): j is string => typeof j === 'string')
       : [];
