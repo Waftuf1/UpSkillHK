@@ -111,7 +111,7 @@ SKILLS TO ASSESS (in order):
 
 Do NOT compute overallReadiness — we compute it server-side.
 
-JSON STRUCTURE:
+JSON STRUCTURE (REQUIRED — the "skills" array MUST have EXACTLY {skillCount} items; never return empty skills):
 { "userId":"gen-...", "generatedAt":"ISO", "industry":"", "role":"",
   "skills": [EXACTLY {skillCount} items in the SAME ORDER as above: { "skillName":"", "category":"technical|soft|tool|certification|domain", "userLevel":0-100, "marketDemand":0-100, "demandTrend":"rising|stable|declining", "status":"missing|fading|strong", "priority":"critical|important|nice_to_have", "reasoning":"1 sentence", "timeToAcquire":"optional for missing" }],
   "strongCount":n, "fadingCount":n, "missingCount":n,
