@@ -2,81 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { openai, isOpenAIAvailable, AI_MODEL, getBedrockClient, BEDROCK_MODEL } from '@/lib/openai';
 import { buildSkillDiagnosisPrompt } from '@/lib/prompts';
 import { parseJsonRobust } from '@/lib/parseJsonResponse';
-import type { UserProfile, SkillGapMap, SkillAssessment } from '@/lib/types';
-
-/** Build a fallback diagnosis when AI response cannot be parsed. */
-function buildFallbackDiagnosis(profile: UserProfile): SkillGapMap {
-  const skills: SkillAssessment[] = [];
-  const fromProfile = [
-    ...(profile.hardSkills || []),
-    ...(profile.softSkills || []),
-    ...(profile.tools || []),
-    ...(profile.certifications || []),
-  ].filter(Boolean).slice(0, 8);
-  for (const s of fromProfile) {
-    skills.push({
-      skillName: s,
-      category: 'technical',
-      userLevel: 60,
-      marketDemand: 65,
-      demandTrend: 'stable',
-      status: 'strong',
-      priority: 'nice_to_have',
-      reasoning: 'From your profile.',
-    });
-  }
-  const commonGaps = ['Data Analytics', 'Excel', 'Communication', 'Project Management'].filter(
-    (g) => !fromProfile.some((f) => f.toLowerCase().includes(g.toLowerCase()))
-  );
-  for (const g of commonGaps.slice(0, 5)) {
-    skills.push({
-      skillName: g,
-      category: 'technical',
-      userLevel: 30,
-      marketDemand: 70,
-      demandTrend: 'rising',
-      status: 'missing',
-      priority: 'important',
-      reasoning: 'Common HK market requirement.',
-      timeToAcquire: '2-3 months',
-    });
-  }
-  const strongCount = skills.filter((s) => s.status === 'strong').length;
-  const missingCount = skills.filter((s) => s.status === 'missing').length;
-  const fadingCount = skills.filter((s) => s.status === 'fading').length;
-  const total = skills.length || 1;
-  return {
-    userId: 'gen-' + Date.now(),
-    generatedAt: new Date().toISOString(),
-    industry: profile.industry || 'Other',
-    role: profile.currentRole || 'Professional',
-    overallReadiness: Math.min(100, Math.round((strongCount / total) * 100)),
-    rubric: {
-      skillCoverage: Math.round((strongCount / total) * 30),
-      criticalGaps: Math.max(0, 25 - Math.round((missingCount / total) * 50)),
-      proficiencyDepth: 15,
-      trendAlignment: 10,
-      fadingRisk: 5,
-    },
-    skills,
-    strongCount,
-    fadingCount,
-    missingCount,
-    topPriorities: commonGaps.slice(0, 3),
-    industryInsights: ['Complete a full analysis to get personalised insights.'],
-    peerComparison: 'Based on your profile.',
-    futureForecast: ['Data & AI literacy', 'Digital transformation skills', 'Cross-border (GBA) awareness', 'ESG & sustainability'],
-    futureForecastDetail: [
-      { title: 'Data & AI literacy', explanation: 'HK job postings increasingly require data analysis and AI tools. Roles in finance, legal, and professional services now commonly list Python, Excel analytics, and AI-assisted workflows.', dataUsed: 'LinkedIn, JobsDB HK' },
-      { title: 'Digital transformation skills', explanation: 'Firms are digitising operations. Skills in process automation, cloud tools, and digital workflows are in rising demand across industries.', dataUsed: 'Indeed HK, Glassdoor' },
-      { title: 'Cross-border (GBA) awareness', explanation: 'Greater Bay Area initiatives create demand for understanding mainland-HK regulatory and business practices.', dataUsed: 'HK job market trends' },
-      { title: 'ESG & sustainability', explanation: 'HKEX and regulatory focus on ESG reporting drives demand for sustainability and governance knowledge.', dataUsed: 'LinkedIn, HK regulatory updates' },
-    ],
-  };
-}
+import type { UserProfile, SkillGapMap } from '@/lib/types';
 
 function getApiErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes('no skills')) {
+    return 'The AI did not return skill assessments. Please try again — upload your CV or complete the form and retry.';
+  }
   if (msg.includes('401') || msg.includes('User not found') || msg.includes('Invalid key') || msg.includes('invalid_api_key')) {
     return 'Your API key is invalid or expired. Check GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, MINIMAX_API_KEY, AWS_BEDROCK_API_KEY, or OPENAI_API_KEY in .env.local and restart the server.';
   }
@@ -214,12 +146,36 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-      // Both providers failed or returned unparseable JSON — use fallback only as last resort
-      console.warn('AI JSON parse failed after retries, using fallback diagnosis:', parseErr);
-      const diagnosis = buildFallbackDiagnosis(profile as UserProfile);
-      return NextResponse.json({ success: true, diagnosis });
+      // Parse failed after retries — return error so user can retry
+      throw parseErr;
     }
-    const diagnosis = mapToSkillGapMap(parsed, profile);
+
+    let diagnosis: SkillGapMap;
+    try {
+      diagnosis = mapToSkillGapMap(parsed, profile);
+    } catch (mapErr) {
+      const msg = mapErr instanceof Error ? mapErr.message : String(mapErr);
+      if (msg.includes('no skills') && content) {
+        // Retry AI once when it returns empty skills
+        try {
+          const retry = await openai.chat.completions.create({
+            model: AI_MODEL,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.3,
+            response_format: { type: 'json_object' },
+          });
+          const retryContent = retry.choices[0]?.message?.content;
+          if (retryContent) {
+            const retryParsed = parseJsonRobust<Record<string, unknown>>(retryContent);
+            diagnosis = mapToSkillGapMap(retryParsed, profile);
+            return NextResponse.json({ success: true, diagnosis });
+          }
+        } catch {
+          // fall through to throw
+        }
+      }
+      throw mapErr;
+    }
 
     return NextResponse.json({ success: true, diagnosis });
   } catch (err) {
@@ -230,7 +186,13 @@ export async function POST(request: NextRequest) {
 }
 
 function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile): SkillGapMap {
-  const rawSkills = parsed.skills ?? parsed.skillAssessments ?? parsed.assessments ?? [];
+  const p = parsed as Record<string, unknown>;
+  const rawSkills =
+    p.skills ??
+    p.skillAssessments ??
+    p.assessments ??
+    (typeof p.data === 'object' && p.data !== null ? (p.data as Record<string, unknown>).skills : undefined) ??
+    [];
   const skills = Array.isArray(rawSkills)
     ? rawSkills.map((s: Record<string, unknown>) => {
         const userLevel = typeof s.userLevel === 'number' ? s.userLevel : 50;
@@ -280,14 +242,14 @@ function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile)
       })
     : [];
 
-  // If AI returned no skills, use fallback to avoid broken 0/0/0 diagnosis
-  const fallback = buildFallbackDiagnosis(profile);
-  const finalSkills = skills.length > 0 ? skills : fallback.skills;
+  if (skills.length === 0) {
+    throw new Error('AI returned no skills. Please try again.');
+  }
 
-  const total = finalSkills.length || 1;
-  const strongSkills = finalSkills.filter((s) => s.status === 'strong');
-  const fadingSkills = finalSkills.filter((s) => s.status === 'fading');
-  const missingSkills = finalSkills.filter((s) => s.status === 'missing');
+  const total = skills.length || 1;
+  const strongSkills = skills.filter((s) => s.status === 'strong');
+  const fadingSkills = skills.filter((s) => s.status === 'fading');
+  const missingSkills = skills.filter((s) => s.status === 'missing');
   const criticalMissingSkills = missingSkills.filter((s) => s.priority === 'critical');
   const strongCount = strongSkills.length;
   const fadingCount = fadingSkills.length;
@@ -333,13 +295,13 @@ function mapToSkillGapMap(parsed: Record<string, unknown>, profile: UserProfile)
     role: typeof parsed.role === 'string' ? parsed.role : profile.currentRole,
     overallReadiness,
     rubric,
-    skills: finalSkills,
+    skills,
     strongCount,
     fadingCount,
     missingCount,
-    topPriorities: Array.isArray(parsed.topPriorities) && parsed.topPriorities.length > 0
+    topPriorities: Array.isArray(parsed.topPriorities)
       ? parsed.topPriorities.map((p: unknown) => (typeof p === 'string' ? p : String((p as Record<string, unknown>)?.title ?? (p as Record<string, unknown>)?.name ?? p)))
-      : finalSkills === fallback.skills ? fallback.topPriorities : [],
+      : [],
     industryInsights: Array.isArray(parsed.industryInsights)
       ? parsed.industryInsights.map((i: unknown) => {
           if (typeof i === 'string') return i;
