@@ -217,7 +217,17 @@ export async function POST(request: NextRequest) {
             .slice(0, 3)
             .map((s) => s.skillName)
         : [];
-    const priorities = fromTop.length ? fromTop : fromSkills;
+    let priorities = fromTop.length ? fromTop : fromSkills;
+    if (priorities.length === 0) {
+      const seed = `${diagnosis.generatedAt ?? ''}-${diagnosis.role ?? ''}-${diagnosis.industry ?? ''}`;
+      const hash = seed.split('').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+      const defaults = [
+        ['Python', 'Data Analytics', 'ESG Reporting'],
+        ['Data Analytics', 'Python', 'ESG Reporting'],
+        ['ESG Reporting', 'Data Analytics', 'Python'],
+      ];
+      priorities = defaults[Math.abs(hash) % 3];
+    }
     roadmaps = reorderWeeksByPriorities(roadmaps, priorities);
 
     const suitableJobs = Array.isArray(parsedObj?.suitableJobs)
