@@ -41,14 +41,16 @@ function normalizeMilestones(raw: unknown[]): Milestone[] {
 }
 
 function normalizeRoadmaps(raw: unknown[], weeklyHours: number): CareerRoadmap[] {
+  let templatePlan: WeekPlan[] | null = null;
+
   return raw.map((r, idx) => {
     const rec = r as Record<string, unknown>;
     const pathType = mapPathType(rec.pathType ?? rec.path ?? rec.type ?? rec.name, idx);
     const rawMilestones = (rec.milestones ?? rec.milestone ?? []) as unknown[];
     const milestones = normalizeMilestones(rawMilestones);
     const weeklyPlan = (rec.weeklyPlan ?? rec.weekly_plan ?? rec.weekPlan ?? []) as Record<string, unknown>[];
-    const normalizedWeeks: WeekPlan[] = weeklyPlan.map((w, idx) => {
-      const weekNum = typeof w.weekNumber === 'number' ? w.weekNumber : typeof w.week === 'number' ? w.week : idx + 1;
+    let normalizedWeeks: WeekPlan[] = weeklyPlan.map((w, widx) => {
+      const weekNum = typeof w.weekNumber === 'number' ? w.weekNumber : typeof w.week === 'number' ? w.week : widx + 1;
       const tasks = (w.tasks ?? w.task ?? []) as Record<string, unknown>[];
       const normalizedTasks: LearningTask[] = tasks.map((t) => {
         const resources = (t.resources ?? t.resource ?? []) as Record<string, unknown>[];
@@ -97,6 +99,10 @@ function normalizeRoadmaps(raw: unknown[], weeklyHours: number): CareerRoadmap[]
         assessmentIncluded: Boolean(w.assessmentIncluded ?? w.assessment ?? false),
       };
     });
+    // Fallback: if AI skipped weeklyPlan for Path B/C, reuse first path's plan so they display
+    if (normalizedWeeks.length > 0) templatePlan = normalizedWeeks;
+    else if (templatePlan && templatePlan.length > 0) normalizedWeeks = templatePlan;
+
     const rawTitle = rec.title ?? rec.name ?? rec.path ?? '';
     const rawSubtitle = rec.subtitle ?? rec.description ?? '';
     const rawTimeline = rec.timeline ?? rec.duration ?? (pathType === 'stay_dominate' ? '3-6 months' : pathType === 'level_up' ? '6-12 months' : '12-18 months');
@@ -170,25 +176,34 @@ export async function POST(request: NextRequest) {
 
     const prompt = buildRoadmapPrompt(diagnosis, weeklyHours, formats, goal, targetRole);
 
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 4096,
-      response_format: { type: 'json_object' },
-    });
+    const callAI = () =>
+      openai.chat.completions.create({
+        model: AI_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        max_tokens: 8192,
+        response_format: { type: 'json_object' },
+      });
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content || typeof content !== 'string') throw new Error('No response from AI');
-    const trimmed = content.trim();
-    if (trimmed.toLowerCase().includes('bad request') || (trimmed.length < 100 && trimmed.toLowerCase().includes('error'))) {
-      throw new Error('API returned an error. Check your API key.');
-    }
+    let content: string | null | undefined;
     let parsed: unknown;
-    try {
-      parsed = parseJsonRobust(content);
-    } catch {
-      throw new Error('AI returned invalid roadmap data. Please try again.');
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const completion = await callAI();
+      content = completion.choices[0]?.message?.content;
+      if (!content || typeof content !== 'string') throw new Error('No response from AI');
+      const trimmed = content.trim();
+      if (trimmed.toLowerCase().includes('bad request') || (trimmed.length < 100 && trimmed.toLowerCase().includes('error'))) {
+        throw new Error('API returned an error. Check your API key.');
+      }
+      try {
+        parsed = parseJsonRobust(content);
+        break;
+      } catch (parseErr) {
+        if (attempt === 1) {
+          console.error('Roadmap parse failed after retry:', parseErr);
+          throw new Error('AI returned invalid roadmap data. Please try again.');
+        }
+      }
     }
     const parsedObj = parsed as Record<string, unknown>;
     const rawRoadmaps = Array.isArray(parsedObj?.roadmaps) ? parsedObj.roadmaps : (Array.isArray(parsed) ? parsed : [parsed]);
@@ -202,7 +217,17 @@ export async function POST(request: NextRequest) {
             .slice(0, 3)
             .map((s) => s.skillName)
         : [];
-    const priorities = fromTop.length ? fromTop : fromSkills;
+    let priorities = fromTop.length ? fromTop : fromSkills;
+    if (priorities.length === 0) {
+      const seed = `${diagnosis.generatedAt ?? ''}-${diagnosis.role ?? ''}-${diagnosis.industry ?? ''}`;
+      const hash = seed.split('').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+      const defaults = [
+        ['Python', 'Data Analytics', 'ESG Reporting'],
+        ['Data Analytics', 'Python', 'ESG Reporting'],
+        ['ESG Reporting', 'Data Analytics', 'Python'],
+      ];
+      priorities = defaults[Math.abs(hash) % 3];
+    }
     roadmaps = reorderWeeksByPriorities(roadmaps, priorities);
 
     const suitableJobs = Array.isArray(parsedObj?.suitableJobs)
