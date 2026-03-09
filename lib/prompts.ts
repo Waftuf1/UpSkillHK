@@ -137,7 +137,10 @@ PATH A "Stay & Dominate" (3-6mo): Close critical gaps. pathType: "stay_dominate"
 PATH B "Level Up" (6-12mo): Next seniority. pathType: "level_up"
 PATH C "Pivot" (12-18mo): Adjacent field. pathType: "pivot"
 
-CRITICAL — Personalisation: The weeklyPlan MUST reflect THIS user's topPriorities and skill gaps. Week 1 MUST focus on their #1 top priority skill. Different CVs = different week order and tasks. Never use a generic default order (e.g. ESG first). Use their topPriorities array to order weeks.
+CRITICAL — Personalisation (DO NOT IGNORE):
+- Week 1 theme MUST be the user's #1 topPriorities skill (e.g. if topPriorities=["Python","Data Analytics"], Week 1 = "Python Basics" or "Python Foundations", NOT "ESG").
+- Week 2 = their #2 priority, Week 3 = #3, etc. Order weeks by their topPriorities.
+- Each path's weeklyPlan MUST differ based on this user's role, industry, and skill gaps. Never copy a generic template.
 
 For EACH path: title, subtitle, timeline, weeklyCommitment, targetOutcome, milestones (3-4), weeklyPlan (6-8 weeks, 2-3 tasks/week). Each task: title, format, duration, description, skillTargeted, difficulty, resources: [{ type, title, url }].
 
