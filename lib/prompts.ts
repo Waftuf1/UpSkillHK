@@ -127,6 +127,7 @@ CRITICAL: Output ONLY the JSON object. No markdown, no \`\`\`json, no text befor
 export const ROADMAP_GENERATION_PROMPT = `You are a career coach for Hong Kong professionals. Generate THREE concise career roadmaps. Be brief.
 
 === THIS USER (use for personalisation — different CV = different output) ===
+Request: {requestId} — generate unique content for THIS request.
 Role: {userRole} | Industry: {userIndustry}
 Top 3 skills to learn (in order): {topPriorities}
 WRONG: Week 1 "ESG & HKEX Rules" for everyone. RIGHT: Week 1 = "{topPriority1}" (their #1 gap).
@@ -206,7 +207,9 @@ export function buildRoadmapPrompt(
   const p2 = top[1] || 'key skills';
   const p3 = top[2] || 'key skills';
   const topStr = top.length ? top.join(', ') : 'Not specified';
+  const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   return ROADMAP_GENERATION_PROMPT.replace('{skillGapMap}', JSON.stringify(skillGapMap, null, 2))
+    .replace('{requestId}', requestId)
     .replace('{userRole}', skillGapMap.role || 'Professional')
     .replace('{userIndustry}', skillGapMap.industry || 'Other')
     .replace('{topPriorities}', topStr)
