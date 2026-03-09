@@ -123,22 +123,65 @@ function getSuitableJobsFromDiagnosis(diagnosis: SkillGapMap): string[] {
   return Array.from(new Set(base)).slice(0, 6);
 }
 
+/** Map week theme/skill to a priority rank for reordering (lower = higher priority) */
+function getWeekSkillRank(week: WeekPlan, priorities: string[]): number {
+  const theme = (week.theme ?? '').toLowerCase();
+  if (theme.includes('integrat')) return 999; // Integration week always last
+  const skills = [...new Set((week.tasks ?? []).map((t) => (t.skillTargeted ?? '').toLowerCase()).filter(Boolean))];
+  const matchStr = [theme, ...skills].join(' ');
+  for (let i = 0; i < priorities.length; i++) {
+    const p = priorities[i].toLowerCase();
+    const tokens = p.split(/\s+/).filter((t) => t.length > 2);
+    if (tokens.some((t) => matchStr.includes(t) || theme.includes(t))) return i;
+  }
+  return priorities.length; // unknown skills go last
+}
+
+function reorderWeeksByPriorities(weeklyPlan: WeekPlan[], priorities: string[], diagnosis: SkillGapMap): WeekPlan[] {
+  if (!priorities.length || !weeklyPlan.length) return weeklyPlan;
+  const seed = `${diagnosis.generatedAt ?? ''}-${diagnosis.role ?? ''}-${diagnosis.industry ?? ''}`;
+  const hash = seed.split('').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+  const sorted = [...weeklyPlan].sort((a, b) => {
+    const ra = getWeekSkillRank(a, priorities);
+    const rb = getWeekSkillRank(b, priorities);
+    if (ra !== rb) return ra - rb;
+    return ((hash + a.theme.length) % 3) - ((hash + b.theme.length) % 3);
+  });
+  return sorted.map((w, i) => ({ ...w, weekNumber: i + 1 }));
+}
+
+function getEffectivePriorities(diagnosis: SkillGapMap): string[] {
+  const fromTop = diagnosis.topPriorities?.filter((p) => p && p !== 'Key skills').slice(0, 3);
+  if (fromTop.length) return fromTop;
+  const fromSkills = (diagnosis.skills ?? [])
+    .filter((s) => s.status === 'missing' && (s.priority === 'critical' || s.priority === 'important'))
+    .sort((a, b) => (b.marketDemand ?? 0) - (a.marketDemand ?? 0))
+    .slice(0, 3)
+    .map((s) => s.skillName);
+  if (fromSkills.length) return fromSkills;
+  return ['Python', 'Data Analytics', 'ESG Reporting'];
+}
+
 function getPersonalizedRoadmaps(diagnosis: SkillGapMap, weeklyHours: number): CareerRoadmap[] {
   const role = diagnosis.role || 'Professional';
   const industry = diagnosis.industry || 'your field';
-  const priorities = diagnosis.topPriorities?.length ? diagnosis.topPriorities.slice(0, 3) : ['Key skills'];
+  const priorities = getEffectivePriorities(diagnosis);
   const hours = `${weeklyHours}-${weeklyHours + 1} hours/week`;
 
-  return MOCK_ROADMAPS.map((r) => ({
-    ...r,
-    weeklyCommitment: hours,
-    targetOutcome:
-      r.pathType === 'stay_dominate'
-        ? `Master ${priorities[0]} and ${priorities[1] || 'key skills'} to secure your ${role} role in ${industry}`
-        : r.pathType === 'level_up'
-          ? `Advance to ${role} or next senior level in ${industry}`
-          : `Move into high-growth adjacent field in ${industry}`,
-  }));
+  return MOCK_ROADMAPS.map((r) => {
+    const weeklyPlan = reorderWeeksByPriorities(r.weeklyPlan ?? [], priorities, diagnosis);
+    return {
+      ...r,
+      weeklyPlan,
+      weeklyCommitment: hours,
+      targetOutcome:
+        r.pathType === 'stay_dominate'
+          ? `Master ${priorities[0]} and ${priorities[1] || 'key skills'} to secure your ${role} role in ${industry}`
+          : r.pathType === 'level_up'
+            ? `Advance to ${role} or next senior level in ${industry}`
+            : `Move into high-growth adjacent field in ${industry}`,
+    };
+  });
 }
 
 export async function POST(request: NextRequest) {

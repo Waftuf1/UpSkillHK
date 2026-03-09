@@ -46,12 +46,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [loadingProgress, setLoadingProgress] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevUserIdRef = useRef<string | null>(null);
+  const userSetDiagnosisAtRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (user?.uid) {
       prevUserIdRef.current = user.uid;
     } else if (prevUserIdRef.current) {
       prevUserIdRef.current = null;
+      userSetDiagnosisAtRef.current = null;
       setProfileState(null);
       setDiagnosisState(null);
       setRoadmapsState(null);
@@ -64,12 +66,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setLoadingProgress(true);
     loadUserProgress(user.uid)
       .then((data) => {
-        if (data) {
-          setProfileState(data.profile ?? null);
-          setDiagnosisState(data.diagnosis ?? null);
-          setRoadmapsState(data.roadmaps ?? null);
-          setSuitableJobsState(data.suitableJobs ?? []);
-        }
+        if (!data) return;
+        const loadedDiag = data.diagnosis as { generatedAt?: string } | null;
+        const userNewer =
+          userSetDiagnosisAtRef.current &&
+          loadedDiag?.generatedAt &&
+          new Date(userSetDiagnosisAtRef.current) > new Date(loadedDiag.generatedAt);
+        if (userNewer) return; // keep user's fresh diagnosis/roadmaps, don't overwrite with stale Firestore data
+        userSetDiagnosisAtRef.current = null;
+        setProfileState(data.profile ?? null);
+        setDiagnosisState(data.diagnosis ?? null);
+        setRoadmapsState(data.roadmaps ?? null);
+        setSuitableJobsState(data.suitableJobs ?? []);
       })
       .catch((err) => {
         console.warn('Could not load progress (offline or error):', err);
@@ -102,6 +110,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const setDiagnosis = useCallback((d: SkillGapMap | null) => {
     setDiagnosisState(d);
+    if (d) {
+      userSetDiagnosisAtRef.current = (d as { generatedAt?: string }).generatedAt ?? null;
+      setRoadmapsState(null); // clear cached roadmaps so they refetch with fresh content
+    }
   }, []);
 
   const setRoadmaps = useCallback((r: CareerRoadmap[] | null) => {
