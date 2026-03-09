@@ -207,7 +207,21 @@ export async function POST(request: NextRequest) {
     }
     const parsedObj = parsed as Record<string, unknown>;
     const rawRoadmaps = Array.isArray(parsedObj?.roadmaps) ? parsedObj.roadmaps : (Array.isArray(parsed) ? parsed : [parsed]);
-    let roadmaps = normalizeRoadmaps(rawRoadmaps as Record<string, unknown>[], weeklyHours);
+    let roadmaps = normalizeRoadmaps((rawRoadmaps as Record<string, unknown>[]).slice(0, 10), weeklyHours);
+
+    // Ensure exactly 3 paths, one per pathType (AI sometimes returns duplicates or 9+ items)
+    const pathOrder: ('stay_dominate' | 'level_up' | 'pivot')[] = ['stay_dominate', 'level_up', 'pivot'];
+    const byType = new Map<string, CareerRoadmap>();
+    for (const r of roadmaps) {
+      if (!byType.has(r.pathType)) byType.set(r.pathType, r);
+    }
+    let result = pathOrder.map((pt) => byType.get(pt)).filter((r): r is CareerRoadmap => !!r);
+    if (result.length < 3) {
+      const used = new Set(result);
+      const rest = roadmaps.filter((r) => !used.has(r));
+      result = [...result, ...rest].slice(0, 3);
+    }
+    roadmaps = result;
     const fromTop = diagnosis.topPriorities?.filter((p) => p && p !== 'Key skills').slice(0, 3) ?? [];
     const fromSkills =
       fromTop.length === 0
