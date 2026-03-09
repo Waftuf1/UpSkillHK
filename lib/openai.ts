@@ -184,12 +184,12 @@ async function bedrockConverseChat(params: {
 }
 
 /** Get Bedrock client for fallback. Uses Converse API for Claude (OpenAI endpoint only supports gpt-oss). */
-export function getBedrockClient(): { chat: { completions: { create: (p: { model: string; messages: Array<{ role: string; content: string }>; temperature?: number; response_format?: { type: string } }) => Promise<{ choices: Array<{ message: { content: string } }> }> } } } | null {
+export function getBedrockClient(): { chat: { completions: { create: (p: { model: string; messages: Array<{ role: string; content: string }>; temperature?: number; max_tokens?: number; response_format?: { type: string } }) => Promise<{ choices: Array<{ message: { content: string } }> }> } } } | null {
   if (!bedrockKey) return null;
   return {
     chat: {
       completions: {
-        create: (p) => bedrockConverseChat({ model: p.model, messages: p.messages as Array<{ role: string; content: string }>, temperature: p.temperature }),
+        create: (p) => bedrockConverseChat({ model: p.model, messages: p.messages as Array<{ role: string; content: string }>, temperature: p.temperature, maxTokens: p.max_tokens }),
       },
     },
   };

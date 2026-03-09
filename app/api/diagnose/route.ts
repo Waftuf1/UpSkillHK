@@ -6,6 +6,9 @@ import type { UserProfile, SkillGapMap } from '@/lib/types';
 
 function getApiErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes('Could not parse JSON') || msg.includes('parse JSON from response')) {
+    return 'The AI returned an unexpected format. Please try again — this usually works on retry.';
+  }
   if (msg.includes('no skills')) {
     return 'The AI did not return skill assessments. Please try again — upload your CV or complete the form and retry.';
   }
@@ -58,6 +61,7 @@ export async function POST(request: NextRequest) {
           model: AI_MODEL,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0,
+          max_tokens: 8192,
           response_format: { type: 'json_object' },
         });
         content = completion.choices[0]?.message?.content ?? null;
@@ -84,6 +88,7 @@ export async function POST(request: NextRequest) {
             model: BEDROCK_MODEL,
             messages: [{ role: 'user', content: prompt }],
             temperature: 0,
+            max_tokens: 8192,
             response_format: { type: 'json_object' },
           });
           content = completion.choices[0]?.message?.content ?? null;
@@ -111,7 +116,36 @@ export async function POST(request: NextRequest) {
     try {
       parsed = parseJsonRobust<Record<string, unknown>>(content);
     } catch (parseErr) {
-      // Parse failed — try other provider before fallback (different model may return valid JSON)
+      // Parse failed — retry same provider once (AI sometimes returns malformed JSON on first try)
+      if (content && (usedPrimary ? openai : bedrockClient)) {
+        try {
+          await new Promise((r) => setTimeout(r, 1500));
+          const retryCompletion = usedPrimary
+            ? await openai!.chat.completions.create({
+                model: AI_MODEL,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0,
+                max_tokens: 8192,
+                response_format: { type: 'json_object' },
+              })
+            : await bedrockClient!.chat.completions.create({
+                model: BEDROCK_MODEL,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0,
+                max_tokens: 8192,
+                response_format: { type: 'json_object' },
+              });
+          const retryContent = retryCompletion.choices[0]?.message?.content;
+          if (retryContent && typeof retryContent === 'string') {
+            parsed = parseJsonRobust<Record<string, unknown>>(retryContent);
+            const diagnosis = mapToSkillGapMap(parsed, profile);
+            return NextResponse.json({ success: true, diagnosis });
+          }
+        } catch {
+          // fall through to try other provider
+        }
+      }
+      // Parse failed after retry — try other provider before fallback (different model may return valid JSON)
       const tryOtherProvider = (usedPrimary && bedrockClient) || (!usedPrimary && (process.env.MINIMAX_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.OPENAI_API_KEY));
       if (tryOtherProvider) {
         console.warn('AI JSON parse failed, retrying with other provider:', parseErr);
@@ -123,12 +157,14 @@ export async function POST(request: NextRequest) {
                   model: BEDROCK_MODEL,
                   messages: [{ role: 'user', content: prompt }],
                   temperature: 0,
+                  max_tokens: 8192,
                   response_format: { type: 'json_object' },
                 })
               : await openai.chat.completions.create({
                   model: AI_MODEL,
                   messages: [{ role: 'user', content: prompt }],
                   temperature: 0,
+                  max_tokens: 8192,
                   response_format: { type: 'json_object' },
                 });
             content = completion.choices[0]?.message?.content ?? null;
@@ -162,6 +198,7 @@ export async function POST(request: NextRequest) {
             model: AI_MODEL,
             messages: [{ role: 'user', content: prompt }],
             temperature: 0,
+            max_tokens: 8192,
             response_format: { type: 'json_object' },
           });
           const retryContent = retry.choices[0]?.message?.content;
