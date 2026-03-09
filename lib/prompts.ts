@@ -149,7 +149,10 @@ CRITICAL — Personalisation (DO NOT IGNORE):
 - Week 2 = "{topPriority2}", Week 3 = "{topPriority3}". Order weeks by their topPriorities.
 - Each path's weeklyPlan MUST reflect THIS user's role ({userRole}) and industry ({userIndustry}). Different CVs = different tasks.
 
-For EACH path: title, subtitle, timeline, weeklyCommitment, targetOutcome, milestones (3-4), weeklyPlan (6-8 weeks, 2-3 tasks/week). Each task: title, format, duration, description, skillTargeted, difficulty, resources: [{ type, title, url }].
+MANDATORY for ALL 3 paths — do NOT skip Path B or C:
+- Each path MUST have: title, subtitle, timeline, weeklyCommitment, targetOutcome, milestones (3-4), weeklyPlan (6-8 weeks, 2-3 tasks per week).
+- Path B "Level Up" and Path C "Pivot" MUST have their own full weeklyPlan — same structure as Path A. Different themes/tasks per path (Level Up = senior skills, Pivot = adjacent field).
+- Each task: title, format, duration, description, skillTargeted, difficulty, resources: [{ type, title, url }].
 
 RESOURCES (required for each task): Provide 2-4 resources with REAL clickable URLs. Mix types:
 - video: YouTube links (e.g. https://www.youtube.com/watch?v=... or https://www.youtube.com/results?search_query=...)
@@ -165,7 +168,7 @@ suitableJobs: Generate 5–7 honest, realistic career paths or job titles the us
 - Use clear, simple job titles (e.g. "Senior Accountant", "Financial Analyst", "Compliance Manager") — HK/GBA market terms
 - No jargon. Easy to read.
 
-Return ONLY valid JSON: { "roadmaps": [3 items], "suitableJobs": ["string"] }. No markdown.`;
+Return ONLY valid JSON: { "roadmaps": [exactly 3 items, each with full weeklyPlan], "suitableJobs": ["string"] }. No markdown.`;
 
 export function buildCVParsingPrompt(cvText: string): string {
   return CV_PARSING_PROMPT.replace('{cvText}', cvText);

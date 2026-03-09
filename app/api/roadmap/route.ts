@@ -41,14 +41,16 @@ function normalizeMilestones(raw: unknown[]): Milestone[] {
 }
 
 function normalizeRoadmaps(raw: unknown[], weeklyHours: number): CareerRoadmap[] {
+  let templatePlan: WeekPlan[] | null = null;
+
   return raw.map((r, idx) => {
     const rec = r as Record<string, unknown>;
     const pathType = mapPathType(rec.pathType ?? rec.path ?? rec.type ?? rec.name, idx);
     const rawMilestones = (rec.milestones ?? rec.milestone ?? []) as unknown[];
     const milestones = normalizeMilestones(rawMilestones);
     const weeklyPlan = (rec.weeklyPlan ?? rec.weekly_plan ?? rec.weekPlan ?? []) as Record<string, unknown>[];
-    const normalizedWeeks: WeekPlan[] = weeklyPlan.map((w, idx) => {
-      const weekNum = typeof w.weekNumber === 'number' ? w.weekNumber : typeof w.week === 'number' ? w.week : idx + 1;
+    let normalizedWeeks: WeekPlan[] = weeklyPlan.map((w, widx) => {
+      const weekNum = typeof w.weekNumber === 'number' ? w.weekNumber : typeof w.week === 'number' ? w.week : widx + 1;
       const tasks = (w.tasks ?? w.task ?? []) as Record<string, unknown>[];
       const normalizedTasks: LearningTask[] = tasks.map((t) => {
         const resources = (t.resources ?? t.resource ?? []) as Record<string, unknown>[];
@@ -97,6 +99,10 @@ function normalizeRoadmaps(raw: unknown[], weeklyHours: number): CareerRoadmap[]
         assessmentIncluded: Boolean(w.assessmentIncluded ?? w.assessment ?? false),
       };
     });
+    // Fallback: if AI skipped weeklyPlan for Path B/C, reuse first path's plan so they display
+    if (normalizedWeeks.length > 0) templatePlan = normalizedWeeks;
+    else if (templatePlan && templatePlan.length > 0) normalizedWeeks = templatePlan;
+
     const rawTitle = rec.title ?? rec.name ?? rec.path ?? '';
     const rawSubtitle = rec.subtitle ?? rec.description ?? '';
     const rawTimeline = rec.timeline ?? rec.duration ?? (pathType === 'stay_dominate' ? '3-6 months' : pathType === 'level_up' ? '6-12 months' : '12-18 months');
