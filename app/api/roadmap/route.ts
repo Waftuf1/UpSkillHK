@@ -224,22 +224,53 @@ export async function POST(request: NextRequest) {
     }
     if (parsed === undefined) throw new Error('No response from AI');
     const parsedObj = parsed as Record<string, unknown>;
-    const rawRoadmaps = Array.isArray(parsedObj?.roadmaps) ? parsedObj.roadmaps : (Array.isArray(parsed) ? parsed : [parsed]);
-    let roadmaps = normalizeRoadmaps((rawRoadmaps as Record<string, unknown>[]).slice(0, 10), weeklyHours);
+    let rawArr = parsedObj?.roadmaps;
+    if (!Array.isArray(rawArr)) rawArr = typeof rawArr === 'object' && rawArr ? [rawArr] : [parsedObj ?? {}];
+    let roadmaps = normalizeRoadmaps((rawArr as Record<string, unknown>[]).slice(0, 10), weeklyHours);
 
-    // Ensure exactly 3 paths, one per pathType (AI sometimes returns duplicates or 9+ items)
+    // Ensure exactly 3 paths (AI sometimes returns 1 or 2)
     const pathOrder: ('stay_dominate' | 'level_up' | 'pivot')[] = ['stay_dominate', 'level_up', 'pivot'];
+    const pathConfig = [
+      { pathType: 'stay_dominate' as const, title: 'Stay & Dominate', timeline: '3-6 months' },
+      { pathType: 'level_up' as const, title: 'Level Up', timeline: '6-12 months' },
+      { pathType: 'pivot' as const, title: 'Pivot', timeline: '12-18 months' },
+    ];
     const byType = new Map<string, CareerRoadmap>();
     for (const r of roadmaps) {
       if (!byType.has(r.pathType)) byType.set(r.pathType, r);
     }
-    let result = pathOrder.map((pt) => byType.get(pt)).filter((r): r is CareerRoadmap => !!r);
+    const result = pathOrder.map((pt) => byType.get(pt)).filter((r): r is CareerRoadmap => !!r);
     if (result.length < 3) {
-      const used = new Set(result);
-      const rest = roadmaps.filter((r) => !used.has(r));
-      result = [...result, ...rest].slice(0, 3);
+      const base = result[0] ?? roadmaps[0];
+      if (base) {
+        for (let i = result.length; i < 3; i++) {
+          const cfg = pathConfig[i];
+          result.push({
+            ...base,
+            pathType: cfg.pathType,
+            title: base.pathType === cfg.pathType ? base.title : cfg.title,
+            timeline: base.pathType === cfg.pathType ? base.timeline : cfg.timeline,
+          });
+        }
+      }
     }
-    roadmaps = result;
+    roadmaps = result.slice(0, 3);
+
+    // Expand weeklyPlan if AI returned only 1-2 weeks (should be 6-8)
+    roadmaps = roadmaps.map((r) => {
+      const plan = r.weeklyPlan ?? [];
+      if (plan.length >= 4) return r;
+      if (plan.length === 0) return r;
+      const expanded: WeekPlan[] = [];
+      const targetWeeks = 6;
+      for (let i = 0; i < targetWeeks; i++) {
+        const src = plan[i % plan.length];
+        const theme = i < plan.length ? src.theme : `${plan[0].theme} (continued)`;
+        expanded.push({ ...src, weekNumber: i + 1, theme });
+      }
+      return { ...r, weeklyPlan: expanded };
+    });
+
     const fromTop = diagnosis.topPriorities?.filter((p) => p && p !== 'Key skills').slice(0, 3) ?? [];
     const fromSkills =
       fromTop.length === 0
