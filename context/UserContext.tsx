@@ -76,7 +76,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         userSetDiagnosisAtRef.current = null;
         setProfileState(data.profile ?? null);
         setDiagnosisState(data.diagnosis ?? null);
-        setRoadmapsState(data.roadmaps ?? null);
+        setRoadmapsState(null); // never load cached roadmaps — always fetch fresh for personalised content
         setSuitableJobsState(data.suitableJobs ?? []);
       })
       .catch((err) => {
@@ -90,10 +90,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     saveUserProgress(user.uid, {
       profile: profile ?? undefined,
       diagnosis: diagnosis ?? undefined,
-      roadmaps: roadmaps ?? undefined,
+      roadmaps: null, // don't persist — always fetch fresh for personalised content
       suitableJobs: suitableJobs.length ? suitableJobs : undefined,
     }).catch(console.error);
-  }, [user?.uid, profile, diagnosis, roadmaps, suitableJobs]);
+  }, [user?.uid, profile, diagnosis, suitableJobs]);
 
   useEffect(() => {
     if (!user?.uid) return;
