@@ -45,6 +45,11 @@ function tryRepairJson(str: string): string {
 }
 
 /**
+ * Try to close truncated JSON (AI hit token limit). Common suffixes for { "roadmaps": [...] }.
+ */
+const TRUNCATED_SUFFIXES = ['}', ']', ']}'];
+
+/**
  * Try multiple strategies to parse JSON from AI output.
  */
 export function parseJsonRobust<T = unknown>(content: string): T {
@@ -58,6 +63,11 @@ export function parseJsonRobust<T = unknown>(content: string): T {
     () => JSON.parse(tryRepairJson(extractJsonRaw(stripped))) as T,
     () => JSON.parse(tryRepairJson(extractJsonRaw(content))) as T,
   ];
+
+  for (const suffix of TRUNCATED_SUFFIXES) {
+    strategies.push(() => JSON.parse(stripped + suffix) as T);
+    strategies.push(() => JSON.parse(tryRepairJson(stripped + suffix)) as T);
+  }
 
   for (const fn of strategies) {
     try {

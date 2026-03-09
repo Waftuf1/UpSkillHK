@@ -117,6 +117,7 @@ export const openai = {
               content: typeof (m as { content: string }).content === 'string' ? (m as { content: string }).content : JSON.stringify((m as { content: string }).content),
             })),
             temperature: params.temperature ?? 0.7,
+            maxTokens: (params as { max_tokens?: number }).max_tokens ?? 8192,
           }) as ReturnType<OpenAI['chat']['completions']['create']>;
         }
         throw new Error('No AI API configured. Add GOOGLE_GEMINI_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY, MINIMAX_API_KEY, or AWS_BEDROCK_API_KEY to .env.local');
@@ -137,6 +138,7 @@ async function bedrockConverseChat(params: {
   model: string;
   messages: Array<{ role: string; content: string }>;
   temperature?: number;
+  maxTokens?: number;
 }): Promise<{ choices: Array<{ message: { content: string } }> }> {
   const url = `https://bedrock-runtime.${bedrockRegion}.amazonaws.com/model/${encodeURIComponent(params.model)}/converse`;
   const converseMessages = params.messages.map((m) => ({
@@ -157,7 +159,7 @@ async function bedrockConverseChat(params: {
       body: JSON.stringify({
         messages: converseMessages,
         inferenceConfig: {
-          maxTokens: 4096,
+          maxTokens: params.maxTokens ?? 8192,
           temperature: params.temperature ?? 0.7,
         },
       }),

@@ -176,25 +176,34 @@ export async function POST(request: NextRequest) {
 
     const prompt = buildRoadmapPrompt(diagnosis, weeklyHours, formats, goal, targetRole);
 
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 4096,
-      response_format: { type: 'json_object' },
-    });
+    const callAI = () =>
+      openai.chat.completions.create({
+        model: AI_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        max_tokens: 8192,
+        response_format: { type: 'json_object' },
+      });
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content || typeof content !== 'string') throw new Error('No response from AI');
-    const trimmed = content.trim();
-    if (trimmed.toLowerCase().includes('bad request') || (trimmed.length < 100 && trimmed.toLowerCase().includes('error'))) {
-      throw new Error('API returned an error. Check your API key.');
-    }
+    let content: string | null | undefined;
     let parsed: unknown;
-    try {
-      parsed = parseJsonRobust(content);
-    } catch {
-      throw new Error('AI returned invalid roadmap data. Please try again.');
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const completion = await callAI();
+      content = completion.choices[0]?.message?.content;
+      if (!content || typeof content !== 'string') throw new Error('No response from AI');
+      const trimmed = content.trim();
+      if (trimmed.toLowerCase().includes('bad request') || (trimmed.length < 100 && trimmed.toLowerCase().includes('error'))) {
+        throw new Error('API returned an error. Check your API key.');
+      }
+      try {
+        parsed = parseJsonRobust(content);
+        break;
+      } catch (parseErr) {
+        if (attempt === 1) {
+          console.error('Roadmap parse failed after retry:', parseErr);
+          throw new Error('AI returned invalid roadmap data. Please try again.');
+        }
+      }
     }
     const parsedObj = parsed as Record<string, unknown>;
     const rawRoadmaps = Array.isArray(parsedObj?.roadmaps) ? parsedObj.roadmaps : (Array.isArray(parsed) ? parsed : [parsed]);
